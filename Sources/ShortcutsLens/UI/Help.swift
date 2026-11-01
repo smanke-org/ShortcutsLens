@@ -1,0 +1,313 @@
+import AppKit
+import ShortcutsLensKit
+import SwiftUI
+
+// MARK: - Content
+
+/// One page of Help. `{hotkey:quickview}` shows the user's own Quick View shortcut,
+/// so the text matches their settings.
+struct HelpTopic: Identifiable, Hashable {
+    let id: String
+    let title: String
+    let symbol: String
+    let blocks: [HelpBlock]
+
+    static func == (a: HelpTopic, b: HelpTopic) -> Bool { a.id == b.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
+@MainActor
+enum HelpBlock {
+    case text(String)
+    case heading(String)
+    /// Keys on the left, what they do on the right.
+    case keys([(String, String)])
+    case tip(String)
+
+    var searchText: String {
+        switch self {
+        case .text(let s), .heading(let s), .tip(let s): Help.resolve(s)
+        case .keys(let rows): rows.map { Help.resolve($0.0) + " " + Help.resolve($0.1) }.joined(separator: " ")
+        }
+    }
+}
+
+@MainActor
+enum Help {
+    static func resolve(_ text: String) -> String {
+        guard text.contains("{") else { return text }
+        return text.replacingOccurrences(of: "{hotkey:quickview}",
+                                         with: Preferences.shared.quickViewHotKey?.display ?? "(no shortcut set)")
+    }
+
+    /// The topic each Settings pane's Help button opens.
+    static func topic(for pane: SettingsPane) -> String {
+        switch pane {
+        case .general: "getting-started"
+        case .quickView: "quick-view"
+        case .sources: "sources"
+        case .sync, .updates: "sync"
+        }
+    }
+
+    static var topics: [HelpTopic] { [
+        HelpTopic(id: "getting-started", title: "Getting Started", symbol: "sparkles", blocks: [
+            .text("ShortcutsLens lists the keyboard shortcuts that work everywhere on your Mac: macOS's own, Services, and the global shortcuts apps register, each with the name of the app it belongs to. It points out shortcuts that collide, shows which keys are free, and puts a cheat sheet for the app you're using one keystroke away."),
+            .heading("Where to find it"),
+            .keys([
+                ("{hotkey:quickview}", "Open the Quick View over any app"),
+                ("Menu bar icon", "The ShortcutsLens menu"),
+                ("Dock icon", "Opens the window"),
+                ("⌘0", "Bring the ShortcutsLens window back"),
+                ("⌘R", "Look for shortcuts again"),
+                ("⌘F", "Search the list"),
+                ("⌘,", "Settings"),
+                ("⌘?", "This Help"),
+            ]),
+            .heading("The window"),
+            .text("The sidebar has All Shortcuts, Conflicts, the Keyboard Map, Find a Free Shortcut, the app you were last using, macOS, Services and App Shortcuts, then every app ShortcutsLens found shortcuts for. Click a shortcut to see where it came from, whether it's on, whether its app is running and what it collides with."),
+            .text("Search matches names, apps and keys. Type the symbols in any order: ⌘⇧4 finds ⇧⌘4."),
+            .heading("What the marks mean"),
+            .keys([
+                ("⚠︎", "Another shortcut uses the same keys"),
+                ("Off", "Turned off, so it does nothing"),
+                ("☾", "The app isn't running, so its shortcut waits until it opens"),
+                ("🔍", "Found in the app's settings file rather than reported by the app"),
+            ]),
+            .tip("While ToolHUD is running, ShortcutsLens's menu moves into ToolHUD's menu bar menu as a submenu, and the icon here steps aside until ToolHUD quits. To keep the icon, turn off \"Put in ToolHUD's menu while ToolHUD is running\" in Settings › General."),
+            .tip("Quitting asks first, since the Quick View shortcut stops while ShortcutsLens is closed. Turn off \"Ask before quitting\" in Settings › General, or tick \"Don't ask again\" when it asks."),
+        ]),
+
+        HelpTopic(id: "sources", title: "Where Shortcuts Come From", symbol: "tray.full", blocks: [
+            .text("macOS keeps no single list of every shortcut, so ShortcutsLens gathers them from several places:"),
+            .keys([
+                ("macOS", "The shortcuts in System Settings › Keyboard › Keyboard Shortcuts, named and grouped as there, with the values macOS is using right now"),
+                ("Built in", "Fixed ones Keyboard settings doesn't list, such as Force Quit, Lock Screen and the 🌐 key's shortcuts"),
+                ("Services", "Services menu items you've given a shortcut"),
+                ("App Shortcuts", "Menu items you've given new keys in Keyboard settings; these work only while their app is in front"),
+                ("Apps' settings", "Global shortcuts apps save in their settings files, found by recognizing how the common shortcut libraries store them"),
+                ("Reported", "Apps that tell ShortcutsLens their shortcuts directly while they run, which is exact"),
+            ]),
+            .heading("What it can't see"),
+            .text("An app that keeps its shortcuts in its own database, or registers fixed ones in code, leaves nothing to read, and macOS doesn't tell one app which keys another has registered. Those shortcuts won't be listed. That's why a free shortcut here is a very good sign, not a promise."),
+            .text("App Store apps keep their settings in a sandbox. Turn on \"Also look in sandboxed apps\" in Settings › Sources to include them; macOS asks once whether ShortcutsLens may see other apps' data."),
+            .heading("Keeping up"),
+            .text("ShortcutsLens looks again when you come back to it, when an app with shortcuts opens, and when you press ⌘R. Settings › Sources shows the last look and lists what you've hidden."),
+            .tip("A shortcut found in a settings file can occasionally be one that only works inside the app, such as a key in its Open dialog. Right-click it and choose Hide This Shortcut, or hide everything from an app by right-clicking it in the sidebar."),
+        ]),
+
+        HelpTopic(id: "conflicts", title: "Conflicts", symbol: "exclamationmark.triangle", blocks: [
+            .text("Two shortcuts conflict when both are on and use the same keys everywhere. Only one of them gets the keys, usually whichever app registered them first, so the other one silently does nothing."),
+            .text("The Conflicts page lists them grouped by keys, and the Quick View has a Conflicts tab. Click one to see its partners and where to change it: macOS's own open in Keyboard settings; an app's are changed in that app's settings."),
+            .tip("Turned-off shortcuts and menu shortcuts that only work inside one app don't count as conflicts."),
+        ]),
+
+        HelpTopic(id: "keyboard", title: "Keyboard Map and Free Shortcuts", symbol: "keyboard.badge.ellipsis", blocks: [
+            .text("The Keyboard Map draws your keyboard for the modifiers you choose. Keys with a system-wide shortcut are lit, conflicts are orange, and free keys are plain. Hover over a key to see what uses it, or click it to list everything on that key with any modifiers."),
+            .text("Turn on \"Include … menus\" to light the menu shortcuts of the app you were using as well."),
+            .heading("Find a Free Shortcut"),
+            .text("Click the box and press a shortcut you have in mind: ShortcutsLens says whether anything uses it. Below are free shortcuts for the modifier sets least likely to collide with app menus. Click one to copy it."),
+            .tip("Shortcuts with three or four modifiers, such as ⌃⌥⌘, almost never appear in app menus, which makes them good choices for global shortcuts."),
+        ]),
+
+        HelpTopic(id: "quick-view", title: "Quick View", symbol: "rectangle.on.rectangle", blocks: [
+            .text("The Quick View floats over the app you're using with its menu shortcuts, every system-wide shortcut and the conflicts, in columns you can take in at a glance."),
+            .keys([
+                ("{hotkey:quickview}", "Open the Quick View, ready to search; press it again to close"),
+                ("Esc", "Close it and go back to your app"),
+                ("Hold ⌘", "Show it until you let go, when turned on in Settings › Quick View"),
+            ]),
+            .text("Settings › Quick View changes the shortcut, turns on holding ⌘, and chooses whether it opens on the app in front or on system-wide shortcuts."),
+            .tip("Holding ⌘ waits a second, so ordinary ⌘ shortcuts never bring it up."),
+        ]),
+
+        HelpTopic(id: "app-menus", title: "The App in Front", symbol: "macwindow", blocks: [
+            .text("With Accessibility permission, ShortcutsLens reads the menus of the app you were using and lists every item that has a shortcut, with where it sits in the menus. It only reads names and keys, and never changes or clicks anything."),
+            .text("The sidebar's app row and the Quick View's first tab always show the last app you used before ShortcutsLens."),
+            .tip("Allow Accessibility in Settings › General › Permission, or in System Settings › Privacy & Security › Accessibility. Everything else in ShortcutsLens works without it."),
+        ]),
+
+        HelpTopic(id: "sync", title: "Sync and Updates", symbol: "icloud", blocks: [
+            .text("Turn on sync in Settings › Sync to keep the Quick View shortcut, options, hidden shortcuts and apps, appearance and update choice the same on every Mac signed in to your iCloud account. Open at login stays per Mac."),
+            .text("Settings › Updates chooses whether new versions install by themselves, ask first, or wait for Check Now. An automatic update waits until the Quick View is closed and the Mac has been idle for two minutes."),
+        ]),
+
+        HelpTopic(id: "links", title: "Links and ToolHUD", symbol: "link", blocks: [
+            .text("ToolHUD buttons, Shortcuts and scripts can open ShortcutsLens pages with links:"),
+            .keys([
+                ("shortcutslens://open", "The window"),
+                ("shortcutslens://quickview", "The Quick View"),
+                ("shortcutslens://conflicts", "The Conflicts page"),
+                ("shortcutslens://keyboard", "The Keyboard Map"),
+                ("shortcutslens://free", "Find a Free Shortcut"),
+                ("shortcutslens://settings", "Settings"),
+            ]),
+        ]),
+
+        HelpTopic(id: "troubleshooting", title: "Troubleshooting", symbol: "wrench.and.screwdriver", blocks: [
+            .heading("An app's shortcut is missing"),
+            .text("The app may keep its shortcuts where ShortcutsLens can't read them, or it may be an App Store app: turn on \"Also look in sandboxed apps\" in Settings › Sources. Check Settings › Sources › Hidden too."),
+            .heading("A shortcut is listed but the app says something else"),
+            .text("Press ⌘R to look again. Some apps save a changed shortcut only when they quit."),
+            .heading("The Quick View shortcut does nothing"),
+            .text("Another app may hold the same keys. Settings › Quick View shows a warning; record a different shortcut."),
+            .heading("The app's menus page is empty"),
+            .text("Allow Accessibility in Settings › General. Some apps build their menus only when you open them, so a few items may not show until you've used them once."),
+        ]),
+    ] }
+}
+
+
+// MARK: - Window
+
+@Observable
+@MainActor
+final class HelpState {
+    var selection: String? = "getting-started"
+    var query = ""
+}
+
+@MainActor
+final class HelpWindow: NSObject, NSWindowDelegate {
+    static let shared = HelpWindow()
+
+    let state = HelpState()
+    private(set) var window: NSWindow?
+
+    /// Opens Help, on `topic` when given.
+    func show(topic: String? = nil) {
+        if let topic { state.query = ""; state.selection = topic }
+        if window == nil {
+            let hosting = NSHostingController(rootView: HelpView(state: state))
+            hosting.sizingOptions = []
+            let window = NSWindow(contentViewController: hosting)
+            window.title = "\(AppInfo.name) Help"
+            window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+            let screen = NSScreen.main?.visibleFrame.height ?? 800
+            window.setContentSize(NSSize(width: 820, height: min(600, screen - 80)))
+            window.contentMinSize = NSSize(width: 640, height: 400)
+            window.isReleasedWhenClosed = false
+            window.setFrameAutosaveName("ShortcutsLensHelp")
+            window.delegate = self
+            window.center()
+            self.window = window
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        window?.makeKeyAndOrderFront(nil)
+    }
+}
+
+struct HelpView: View {
+    @Bindable var state: HelpState
+
+    private var matches: [HelpTopic] {
+        let query = state.query.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !query.isEmpty else { return Help.topics }
+        return Help.topics.filter { topic in
+            topic.title.lowercased().contains(query) || topic.blocks.contains { $0.searchText.lowercased().contains(query) }
+        }
+    }
+
+    var body: some View {
+        NavigationSplitView {
+            List(matches, selection: $state.selection) { topic in
+                Label(topic.title, systemImage: topic.symbol).tag(topic.id)
+            }
+            .navigationSplitViewColumnWidth(min: 190, ideal: 210)
+            .overlay {
+                if matches.isEmpty { Text("No matches").foregroundStyle(.secondary) }
+            }
+        } detail: {
+            if let topic = Help.topics.first(where: { $0.id == state.selection }) {
+                HelpPage(topic: topic, query: state.query)
+            } else {
+                Text("Choose a topic").foregroundStyle(.secondary)
+            }
+        }
+        .searchable(text: $state.query, placement: .sidebar, prompt: "Search Help")
+        .onChange(of: state.query) {
+            // Keep a matching topic on screen while searching.
+            if let first = matches.first, !matches.contains(where: { $0.id == state.selection }) { state.selection = first.id }
+        }
+    }
+}
+
+struct HelpPage: View {
+    let topic: HelpTopic
+    let query: String
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Label(topic.title, systemImage: topic.symbol)
+                    .font(.largeTitle.weight(.semibold))
+                    .padding(.bottom, 4)
+                ForEach(Array(topic.blocks.enumerated()), id: \.offset) { _, block in
+                    view(for: block)
+                }
+            }
+            .padding(28)
+            .frame(maxWidth: 680, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .textSelection(.enabled)
+        }
+    }
+
+    @ViewBuilder
+    private func view(for block: HelpBlock) -> some View {
+        switch block {
+        case .text(let s):
+            Text(Help.resolve(s)).fixedSize(horizontal: false, vertical: true)
+        case .heading(let s):
+            Text(Help.resolve(s)).font(.title3.weight(.semibold)).padding(.top, 8)
+        case .tip(let s):
+            Label { Text(Help.resolve(s)).fixedSize(horizontal: false, vertical: true) } icon: {
+                Image(systemName: "lightbulb").foregroundStyle(.yellow)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
+        case .keys(let rows):
+            Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 16, verticalSpacing: 8) {
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                    let keys = Help.resolve(row.0), what = Help.resolve(row.1)
+                    let hit = !query.isEmpty && (keys + " " + what).lowercased().contains(query.lowercased())
+                    GridRow {
+                        Text(keys)
+                            .font(.body.monospaced().weight(.medium))
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(.quaternary, in: RoundedRectangle(cornerRadius: 5))
+                            // The same key column width in every table on every page.
+                            .frame(width: 210, alignment: .leading)
+                        Text(what).fixedSize(horizontal: false, vertical: true)
+                    }
+                    .background(hit ? Color.yellow.opacity(0.25) : .clear)
+                }
+            }
+        }
+    }
+}
+
+/// The round "?" button macOS puts in the corner of settings panes.
+struct HelpButton: NSViewRepresentable {
+    let topic: String
+
+    func makeNSView(context: Context) -> NSButton {
+        let button = NSButton(title: "", target: context.coordinator, action: #selector(Coordinator.open))
+        button.bezelStyle = .helpButton
+        button.toolTip = "\(AppInfo.name) Help"
+        button.setAccessibilityLabel("Help")
+        return button
+    }
+
+    func updateNSView(_ button: NSButton, context: Context) { context.coordinator.topic = topic }
+
+    func makeCoordinator() -> Coordinator { Coordinator(topic: topic) }
+
+    @MainActor
+    final class Coordinator: NSObject {
+        var topic: String
+        init(topic: String) { self.topic = topic }
+        @objc func open() { HelpWindow.shared.show(topic: topic) }
+    }
+}

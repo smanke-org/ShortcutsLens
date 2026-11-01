@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>ShortcutsLensReleaseStage</key>
+	<string>beta</string>
+	<key>CFBundleDisplayName</key>
+	<string>ShortcutsLens</string>
+	<key>CFBundleExecutable</key>
+	<string>ShortcutsLens</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.smanke.ShortcutsLens</string>
+	<key>CFBundleName</key>
+	<string>ShortcutsLens</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>ShortcutsLens</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>shortcutslens</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>1.0.0</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.utilities</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>26.0</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright © 2026 Steve Manke</string>
+	<key>ToolHUDActions</key>
+	<array>
+		<dict>
+			<key>activates</key>
+			<true/>
+			<key>id</key>
+			<string>quickview</string>
+			<key>shortTitle</key>
+			<string>Quick View</string>
+			<key>symbol</key>
+			<string>rectangle.on.rectangle</string>
+			<key>title</key>
+			<string>Show the Quick View</string>
+		</dict>
+		<dict>
+			<key>activates</key>
+			<true/>
+			<key>id</key>
+			<string>open</string>
+			<key>shortTitle</key>
+			<string>Shortcuts</string>
+			<key>symbol</key>
+			<string>command.square</string>
+			<key>title</key>
+			<string>Open ShortcutsLens</string>
+		</dict>
+		<dict>
+			<key>activates</key>
+			<true/>
+			<key>id</key>
+			<string>conflicts</string>
+			<key>shortTitle</key>
+			<string>Conflicts</string>
+			<key>symbol</key>
+			<string>exclamationmark.triangle</string>
+			<key>title</key>
+			<string>Show shortcut conflicts</string>
+		</dict>
+		<dict>
+			<key>activates</key>
+			<true/>
+			<key>id</key>
+			<string>keyboard</string>
+			<key>shortTitle</key>
+			<string>Keyboard map</string>
+			<key>symbol</key>
+			<string>keyboard</string>
+			<key>title</key>
+			<string>Show the keyboard map</string>
+		</dict>
+	</array>
+</dict>
+</plist>
