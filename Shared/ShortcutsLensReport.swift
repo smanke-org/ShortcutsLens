@@ -28,11 +28,16 @@ enum ShortcutsLensReport {
         var enabled = true
         /// An optional heading ("Capture", "Windows").
         var category: String? = nil
+        /// How the keys are used, when it isn't an ordinary press: "hold", "doubleTap" or
+        /// "toggle". Two of the app's own shortcuts on the same keys with different gestures
+        /// aren't counted as a conflict.
+        var gesture: String? = nil
 
         var plist: [String: Any] {
             var d: [String: Any] = ["id": id, "title": title, "carbonModifiers": carbonModifiers, "enabled": enabled]
             if let keyCode { d["keyCode"] = keyCode }
             if let category { d["category"] = category }
+            if let gesture { d["gesture"] = gesture }
             return d
         }
     }

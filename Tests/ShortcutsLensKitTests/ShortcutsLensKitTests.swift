@@ -208,6 +208,29 @@ import Testing
         #expect(Conflicts.find(in: [entry("app.one", "A", combo, source: .appReport), entry("app.one", "B", combo, source: .appReport)]).count == 1)
     }
 
+    @Test func holdAndDoubleTapOfOneKeyInOneAppDontConflict() {
+        let option = KeyCombo(keyCode: nil, modifiers: [.option])
+        let info: [AnyHashable: Any] = ["app": "Dictate", "shortcuts": [
+            ["id": "dictation", "title": "Dictation", "carbonModifiers": 0x800, "gesture": "hold"],
+            ["id": "handsFree", "title": "Hands-free", "carbonModifiers": 0x800, "gesture": "doubleTap"],
+            ["id": "other", "title": "Other", "carbonModifiers": 0x800, "gesture": "press"],
+        ]]
+        let reported = ShortcutReports.entries(sender: "app.dictate", userInfo: info) ?? []
+        #expect(reported.map(\.gesture) == ["hold", "doubleTap", nil])
+        #expect(reported.allSatisfy { $0.combo == option })
+        // Hold, double-tap and a press: three different ways to use ⌥, none colliding.
+        #expect(Conflicts.find(in: reported).isEmpty)
+        // Two actions on the same gesture still collide.
+        var twin = reported[0]
+        twin.id = "twin"; twin.title = "Assistant"
+        #expect(Conflicts.find(in: reported + [twin])[option]?.map(\.id) == [reported[0].id, "twin"])
+        // Another app on the same keys collides with all of them.
+        let other = entry("app.two", "Launcher", option, source: .appReport)
+        let conflicts = Conflicts.find(in: reported + [other])
+        #expect(conflicts[option]?.count == 4)
+        #expect(Conflicts.partners(of: reported[0], in: conflicts).map(\.ownerID) == ["app.two"])
+    }
+
     @Test func launcherButtonsAreNotHotKeys() {
         let found = PrefsScanner.scan([
             "hotKey": Data(#"{"keyCode":49,"modifiers":11,"key":"Space"}"#.utf8),

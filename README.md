@@ -23,7 +23,7 @@ Requires macOS 26 or later. ShortcutsLens is in beta.
 - **Keyboard Map.** Your keyboard for any mix of modifiers: taken keys lit, conflicts in orange, free keys plain. Click a key to see everything on it.
 - **Find a Free Shortcut.** Press a shortcut you have in mind to see whether anything uses it, or pick from free ones in the modifier sets least likely to clash with app menus. Click to copy.
 - **The app in front.** With Accessibility, the menu shortcuts of the app you were using, with where each sits in its menus.
-- **Quick View.** ⌃⌥⌘K (change it in Settings) floats a cheat sheet over any app: its menu shortcuts, every system-wide shortcut and the conflicts, searchable. Optionally hold ⌘ for a second to peek at it.
+- **Quick View.** ⌃⌥⌘/ (change it in Settings) floats a cheat sheet over any app: its menu shortcuts, every system-wide shortcut and the conflicts, searchable. Optionally hold ⌘ for a second to peek at it.
 - **Search by name or keys.** Type ⌘⇧4 or ⇧⌘4, either finds it.
 - **Hide what you don't need.** Right-click a shortcut or an app to hide it; Settings › Sources brings them back.
 - **Dock, menu bar, both or neither,** with ToolHUD menu support, light and dark appearance, and iCloud settings sync.

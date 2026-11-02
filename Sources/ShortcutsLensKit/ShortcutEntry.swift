@@ -55,9 +55,13 @@ public struct ShortcutEntry: Identifiable, Hashable, Sendable {
     public var detail: String?
     /// Where an `.appMenus` entry sits ("File › Export").
     public var menuPath: String?
+    /// How the keys are used, when an app's report says: "hold", "doubleTap" or "toggle".
+    /// nil is an ordinary press.
+    public var gesture: String?
 
     public init(id: String, ownerID: String, ownerName: String, title: String, category: String? = nil,
-                combo: KeyCombo, enabled: Bool = true, source: ShortcutSource, detail: String? = nil, menuPath: String? = nil) {
+                combo: KeyCombo, enabled: Bool = true, source: ShortcutSource, detail: String? = nil, menuPath: String? = nil,
+                gesture: String? = nil) {
         self.id = id
         self.ownerID = ownerID
         self.ownerName = ownerName
@@ -68,6 +72,18 @@ public struct ShortcutEntry: Identifiable, Hashable, Sendable {
         self.source = source
         self.detail = detail
         self.menuPath = menuPath
+        self.gesture = gesture
+    }
+
+    /// "Hold", "Double-tap", "Press to start and stop", or nil for a press.
+    public var gestureTitle: String? {
+        switch gesture {
+        case nil: nil
+        case "hold": "Hold"
+        case "doubleTap": "Double-tap"
+        case "toggle": "Press to start and stop"
+        case let other?: other
+        }
     }
 
     public static let macOSOwner = "com.apple.macOS"
@@ -105,23 +121,35 @@ public struct ShortcutEntry: Identifiable, Hashable, Sendable {
 /// Shortcuts that share keys.
 public enum Conflicts {
     /// Every key combination that two or more enabled, system-wide shortcuts claim. Within
-    /// one app it takes two exact entries (macOS's own, or an app's report): a settings file
-    /// often stores one shortcut in two places, under two names.
+    /// one app it takes two exact entries (macOS's own, or an app's report) used the same way:
+    /// a settings file often stores one shortcut in two places, under two names, and an app
+    /// that tells holding a key from double-tapping it keeps the two apart itself.
     public static func find(in entries: [ShortcutEntry]) -> [KeyCombo: [ShortcutEntry]] {
         var byCombo: [KeyCombo: [ShortcutEntry]] = [:]
         for entry in entries where entry.enabled && entry.isGlobal {
             byCombo[entry.combo, default: []].append(entry)
         }
-        return byCombo.filter { _, list in
-            if Set(list.map(\.ownerID)).count > 1 { return true }
-            let exact = list.filter { $0.source != .appSettings }
-            return Set(exact.map { $0.title.lowercased() }).count > 1
+        var found: [KeyCombo: [ShortcutEntry]] = [:]
+        for (combo, list) in byCombo {
+            // Entries that collide with at least one other on this combo.
+            let clashing = list.filter { entry in list.contains { collide(entry, $0) } }
+            if !clashing.isEmpty { found[combo] = clashing }
         }
+        return found
     }
 
     /// The other entries a shortcut collides with.
     public static func partners(of entry: ShortcutEntry, in conflicts: [KeyCombo: [ShortcutEntry]]) -> [ShortcutEntry] {
         guard entry.enabled, entry.isGlobal else { return [] }
-        return (conflicts[entry.combo] ?? []).filter { $0.id != entry.id }
+        return (conflicts[entry.combo] ?? []).filter { collide(entry, $0) }
+    }
+
+    /// Two entries on the same combo. Different apps always collide, since both hear the
+    /// keys. Within one app, only two different exact shortcuts used the same way do.
+    static func collide(_ a: ShortcutEntry, _ b: ShortcutEntry) -> Bool {
+        guard a.id != b.id else { return false }
+        if a.ownerID != b.ownerID { return true }
+        return a.source != .appSettings && b.source != .appSettings && a.gesture == b.gesture
+            && a.title.lowercased() != b.title.lowercased()
     }
 }

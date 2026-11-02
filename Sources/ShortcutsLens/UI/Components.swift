@@ -71,6 +71,7 @@ struct ShortcutRow: View {
     private var subtitle: String? {
         var parts: [String] = []
         if showOwner { parts.append(entry.ownerName) }
+        if let gesture = entry.gestureTitle, entry.title.range(of: gesture, options: .caseInsensitive) == nil { parts.append(gesture) }
         if let category = entry.category, category != entry.ownerName, entry.source != .appMenus { parts.append(category) }
         if let path = entry.menuPath, entry.source == .appMenus { parts.append(path) }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")

@@ -201,7 +201,7 @@ struct GeneralSettings: View {
         .confirmationDialog("Reset ShortcutsLens settings?", isPresented: $confirmReset) {
             Button("Reset", role: .destructive) { prefs.resetToDefaults(); ShortcutStore.shared.rebuild() }
         } message: {
-            Text("The Quick View shortcut goes back to ⌃⌥⌘K, hidden shortcuts and apps come back, and the options go back to how ShortcutsLens started. Where it appears, login, sync and updates stay as they are.")
+            Text("The Quick View shortcut goes back to \(Preferences.defaultHotKey.display), hidden shortcuts and apps come back, and the options go back to how ShortcutsLens started. Where it appears, login, sync and updates stay as they are.")
         }
     }
 }

@@ -24,8 +24,10 @@ final class Preferences {
     static let keys = [Keys.quickViewHotKey, Keys.holdCommand, Keys.quickViewStartsOn, Keys.showDisabled, Keys.scanSandboxed,
                        Keys.hiddenEntries, Keys.hiddenApps, Keys.confirmQuit]
 
-    /// ⌃⌥⌘K: "keys". Three modifiers keep it out of the way of app menus.
-    static let defaultHotKey = KeyCombo(keyCode: 40, modifiers: [.control, .option, .command])
+    /// ⌃⌥⌘/, the ? key. Three modifiers keep it out of the way of app menus.
+    static let defaultHotKey = KeyCombo(keyCode: 44, modifiers: [.control, .option, .command])
+    /// 1.0.0's default, which ClickLens also uses.
+    private static let oldDefaultHotKey = KeyCombo(keyCode: 40, modifiers: [.control, .option, .command])
 
     enum StartPage: String, CaseIterable, Identifiable {
         case frontmostApp, systemWide
@@ -54,6 +56,11 @@ final class Preferences {
         let d = UserDefaults.standard
         d.register(defaults: [Keys.holdCommand: false, Keys.showDisabled: true, Keys.scanSandboxed: false, Keys.confirmQuit: true,
                               Keys.quickViewStartsOn: StartPage.frontmostApp.rawValue])
+        // A saved copy of 1.0.0's default follows the default to its new keys, once.
+        if !d.bool(forKey: "movedOldDefaultHotKey") {
+            d.set(true, forKey: "movedOldDefaultHotKey")
+            if Self.decode(d.string(forKey: Keys.quickViewHotKey)) == Self.oldDefaultHotKey { d.removeObject(forKey: Keys.quickViewHotKey) }
+        }
         quickViewHotKey = Self.storedHotKey()
         holdCommand = d.bool(forKey: Keys.holdCommand)
         quickViewStartsOn = StartPage(rawValue: d.string(forKey: Keys.quickViewStartsOn) ?? "") ?? .frontmostApp

@@ -21,10 +21,13 @@ public enum ShortcutReports {
             let modifiers = (item["carbonModifiers"] as? Int).map(Modifiers.init(carbon:))
                 ?? (item["cocoaModifiers"] as? Int).map(Modifiers.init(cocoa:)) ?? []
             guard keyCode != nil || !modifiers.isEmpty else { return nil }
+            // "press" (or nothing) is the ordinary case.
+            let gesture = (item["gesture"] as? String).flatMap { $0.isEmpty || $0 == "press" ? nil : $0 }
             return ShortcutEntry(id: "report|\(sender)|\(id)", ownerID: sender, ownerName: appName, title: title,
                                  category: item["category"] as? String, combo: KeyCombo(keyCode: keyCode, modifiers: modifiers),
                                  enabled: item["enabled"] as? Bool ?? true, source: .appReport,
-                                 detail: "\(appName) reported this shortcut itself. Change it in \(appName)'s settings.")
+                                 detail: "\(appName) reported this shortcut itself. Change it in \(appName)'s settings.",
+                                 gesture: gesture)
         }
     }
 }
