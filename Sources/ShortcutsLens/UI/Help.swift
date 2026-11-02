@@ -67,11 +67,14 @@ enum Help {
             .heading("The window"),
             .text("The sidebar has All Shortcuts, Conflicts, the Keyboard Map, Find a Free Shortcut, the app you were last using, macOS, Services and App Shortcuts, then every app ShortcutsLens found shortcuts for. Click a shortcut to see where it came from, whether it's on, whether its app is running and what it collides with."),
             .text("Search matches names, apps and keys. Type the symbols in any order: ⌘⇧4 finds ⇧⌘4."),
+            .text("Right-click a shortcut to copy it, copy every shortcut shown, or hide it. Right-click an app in the sidebar to hide everything from it."),
+            .heading("The menu bar menu"),
+            .text("The menu opens the Quick View, the window, the Conflicts page (it says how many there are), the Keyboard Map and Find a Free Shortcut, plus Help, Settings, updates and the version you're running."),
             .heading("What the marks mean"),
             .keys([
                 ("⚠︎", "Another shortcut uses the same keys"),
                 ("Off", "Turned off, so it does nothing"),
-                ("☾", "The app isn't running, so its shortcut waits until it opens"),
+                ("☾ (in the sidebar)", "The app isn't running, so its shortcut waits until it opens"),
                 ("🔍", "Found in the app's settings file rather than reported by the app"),
             ]),
             .tip("While ToolHUD is running, ShortcutsLens's menu moves into ToolHUD's menu bar menu as a submenu, and the icon here steps aside until ToolHUD quits. To keep the icon, turn off \"Put in ToolHUD's menu while ToolHUD is running\" in Settings › General."),
@@ -92,14 +95,15 @@ enum Help {
             .text("An app that keeps its shortcuts in its own database, or registers fixed ones in code, leaves nothing to read, and macOS doesn't tell one app which keys another has registered. Those shortcuts won't be listed. That's why a free shortcut here is a very good sign, not a promise."),
             .text("App Store apps keep their settings in a sandbox. Turn on \"Also look in sandboxed apps\" in Settings › Sources to include them; macOS asks once whether ShortcutsLens may see other apps' data."),
             .heading("Keeping up"),
-            .text("ShortcutsLens looks again when you come back to it, when an app with shortcuts opens, and when you press ⌘R. Settings › Sources shows the last look and lists what you've hidden."),
+            .text("ShortcutsLens looks again when you come back to it, when an app with shortcuts opens, and when you press ⌘R. Settings › Sources shows the last look, has a Rescan button, and lists the shortcuts and apps you've hidden, each with Show to bring it back."),
+            .text("Turned-off shortcuts are listed and marked Off. Turn off \"Show turned-off shortcuts\" in Settings › Sources to leave them out."),
             .tip("A shortcut found in a settings file can occasionally be one that only works inside the app, such as a key in its Open dialog. Right-click it and choose Hide This Shortcut, or hide everything from an app by right-clicking it in the sidebar."),
         ]),
 
         HelpTopic(id: "conflicts", title: "Conflicts", symbol: "exclamationmark.triangle", blocks: [
             .text("Two shortcuts conflict when both are on and use the same keys everywhere. Only one of them gets the keys, usually whichever app registered them first, so the other one silently does nothing."),
             .text("The Conflicts page lists them grouped by keys, and the Quick View has a Conflicts tab. Click one to see its partners and where to change it: macOS's own open in Keyboard settings; an app's are changed in that app's settings."),
-            .tip("Turned-off shortcuts and menu shortcuts that only work inside one app don't count as conflicts."),
+            .tip("Turned-off shortcuts and menu shortcuts that only work inside one app don't count as conflicts. Neither do two of one app's own shortcuts on the same keys used in different ways, such as holding a key and double-tapping it, when the app reports them."),
         ]),
 
         HelpTopic(id: "keyboard", title: "Keyboard Map and Free Shortcuts", symbol: "keyboard.badge.ellipsis", blocks: [
@@ -115,9 +119,9 @@ enum Help {
             .keys([
                 ("{hotkey:quickview}", "Open the Quick View, ready to search; press it again to close"),
                 ("Esc", "Close it and go back to your app"),
-                ("Hold ⌘", "Show it until you let go, when turned on in Settings › Quick View"),
+                ("Hold ⌘", "Show it until you let go, when turned on in Settings › Quick View (needs Accessibility permission)"),
             ]),
-            .text("Settings › Quick View changes the shortcut, turns on holding ⌘, and chooses whether it opens on the app in front or on system-wide shortcuts."),
+            .text("Settings › Quick View changes the shortcut (click it, press new keys, or press Delete to clear it), turns on holding ⌘, and chooses whether it opens on the app in front or on system-wide shortcuts. If another app already holds the keys you pick, it says so in red."),
             .tip("Holding ⌘ waits a second, so ordinary ⌘ shortcuts never bring it up."),
         ]),
 
@@ -129,7 +133,7 @@ enum Help {
 
         HelpTopic(id: "sync", title: "Sync and Updates", symbol: "icloud", blocks: [
             .text("Turn on sync in Settings › Sync to keep the Quick View shortcut, options, hidden shortcuts and apps, appearance and update choice the same on every Mac signed in to your iCloud account. Open at login stays per Mac."),
-            .text("Settings › Updates chooses whether new versions install by themselves, ask first, or wait for Check Now. An automatic update waits until the Quick View is closed and the Mac has been idle for two minutes."),
+            .text("Settings › Updates chooses whether new versions install by themselves, ask first, or wait for Check Now, and how often to check: once a day, or on a schedule you set, from every hour to once a year. An automatic update waits until the Quick View is closed and the Mac has been idle for two minutes. What's New… shows the notes for recent versions."),
         ]),
 
         HelpTopic(id: "links", title: "Links and ToolHUD", symbol: "link", blocks: [
@@ -153,6 +157,8 @@ enum Help {
             .text("Another app may hold the same keys. Settings › Quick View shows a warning; record a different shortcut."),
             .heading("The app's menus page is empty"),
             .text("Allow Accessibility in Settings › General. Some apps build their menus only when you open them, so a few items may not show until you've used them once."),
+            .heading("Starting over"),
+            .text("Settings › General › Reset to Defaults puts the options back and shows every hidden shortcut and app again."),
         ]),
     ] }
 }

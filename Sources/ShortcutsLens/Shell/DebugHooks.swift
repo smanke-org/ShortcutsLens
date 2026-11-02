@@ -23,7 +23,7 @@ enum DebugHooks {
 
     /// `SHORTCUTSLENS_DEBUG_DUMP=<file>` writes every shortcut found and the conflicts to a
     /// text file once the scan is done, then quits.
-    /// `SHORTCUTSLENS_DEBUG_SHOW=<all|conflicts|keyboard|free|frontmost|macOS|app:<id>|quickview|settings:<pane>|help>`
+    /// `SHORTCUTSLENS_DEBUG_SHOW=<all|conflicts|keyboard|free|frontmost|macOS|app:<id>|quickview|settings:<pane>|help[:<topic>]>`
     /// opens that page; with `SHORTCUTSLENS_DEBUG_SNAPSHOT=<png>` it draws the window to the
     /// file and quits.
     @MainActor
@@ -39,8 +39,8 @@ enum DebugHooks {
             case "quickview":
                 QuickView.shared.show()
                 window = QuickView.shared.debugPanel
-            case "help":
-                HelpWindow.shared.show()
+            case let s where s.hasPrefix("help"):
+                HelpWindow.shared.show(topic: s.hasPrefix("help:") ? String(s.dropFirst(5)) : nil)
                 window = NSApp.windows.first { $0.title.contains("Help") }
             case let s where s.hasPrefix("settings"):
                 let pane = SettingsPane(rawValue: String(s.dropFirst("settings:".count))) ?? .general
