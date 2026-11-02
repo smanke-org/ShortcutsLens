@@ -4,7 +4,7 @@
 
 Global shortcuts pile up. macOS has dozens, every menu bar utility adds a few more, and nothing shows them all in one place. When two apps want the same keys, one of them silently stops working, and when you pick a new shortcut you're guessing whether it's free. ShortcutsLens gathers macOS's shortcuts, Services, App Shortcuts and the global shortcuts your apps register into one searchable list, flags the conflicts, draws a keyboard of what's taken, and puts a cheat sheet for the app you're using one keystroke away.
 
-<p align="center"><img src="docs/images/all.png" width="800" alt="The ShortcutsLens window listing macOS shortcuts, with a TextLens shortcut selected and the inspector showing it also used by SnagAnything"></p>
+<p align="center"><img src="docs/images/all.png" width="800" alt="The ShortcutsLens window listing macOS shortcuts, with a SnagAnything shortcut selected and the inspector showing that TextLens uses the same keys"></p>
 
 ## Download
 
@@ -32,8 +32,8 @@ Requires macOS 26 or later. ShortcutsLens is in beta.
 
 <table>
 <tr>
-<td width="50%"><img src="docs/images/quickview.png" alt="The Quick View over the desktop, listing system-wide shortcuts in three columns"><br><sub><b>Quick View.</b> A cheat sheet over any app, one shortcut away.</sub></td>
-<td width="50%"><img src="docs/images/keyboard.png" alt="The Keyboard Map with Command selected, showing the keys macOS uses lit in blue"><br><sub><b>Keyboard Map.</b> What's taken for each set of modifiers.</sub></td>
+<td width="50%"><img src="docs/images/quickview.png" alt="The Quick View listing Finder's menu shortcuts in three columns, with tabs for system-wide shortcuts and conflicts"><br><sub><b>Quick View.</b> A cheat sheet over any app, one shortcut away.</sub></td>
+<td width="50%"><img src="docs/images/keyboard.png" alt="The Keyboard Map with Command selected, showing the keys in use lit in blue and everything on the M key in the inspector"><br><sub><b>Keyboard Map.</b> What's taken for each set of modifiers.</sub></td>
 </tr>
 <tr>
 <td width="50%"><img src="docs/images/conflicts.png" alt="The Conflicts page, showing SnagAnything and TextLens both on Control-Option-Command-2"><br><sub><b>Conflicts.</b> Shortcuts that fight over the same keys.</sub></td>

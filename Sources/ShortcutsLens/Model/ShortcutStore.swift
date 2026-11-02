@@ -31,6 +31,7 @@ final class ShortcutStore {
 
     @ObservationIgnored private var observers: [NSObjectProtocol] = []
     @ObservationIgnored private var rescanPending = false
+    @ObservationIgnored private var frontmostPinned = false
 
     private init() {}
 
@@ -38,6 +39,14 @@ final class ShortcutStore {
         KeyboardLayout.install()
         running = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
         noteFrontmost(NSWorkspace.shared.frontmostApplication)
+        #if DEBUG
+        // Screenshots show a stock app in front, not whatever is in front on this Mac.
+        if let id = ProcessInfo.processInfo.environment["SHORTCUTSLENS_DEBUG_FRONTMOST"],
+           let app = NSRunningApplication.runningApplications(withBundleIdentifier: id).first {
+            noteFrontmost(app)
+            frontmostPinned = true
+        }
+        #endif
         let center = NSWorkspace.shared.notificationCenter
         observers.append(center.addObserver(forName: NSWorkspace.didLaunchApplicationNotification, object: nil, queue: .main) { note in
             let id = (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.bundleIdentifier
@@ -204,6 +213,9 @@ final class ShortcutStore {
             return NSImage(systemSymbolName: "gearshape.2", accessibilityDescription: "Services") ?? NSImage()
         case ShortcutEntry.allAppsOwner:
             return NSImage(systemSymbolName: "menubar.rectangle", accessibilityDescription: "All apps") ?? NSImage()
+        case Bundle.main.bundleIdentifier:
+            // Our own Quick View shortcut: a copy that Launch Services hasn't indexed has no URL.
+            return NSApp.applicationIconImage
         default:
             if let url = apps[ownerID]?.url ?? NSWorkspace.shared.urlForApplication(withBundleIdentifier: ownerID) {
                 return NSWorkspace.shared.icon(forFile: url.path)
@@ -225,7 +237,7 @@ final class ShortcutStore {
     // MARK: - The app in front
 
     private func noteFrontmost(_ app: NSRunningApplication?) {
-        guard let app, app.processIdentifier != ProcessInfo.processInfo.processIdentifier, app.activationPolicy == .regular else { return }
+        guard !frontmostPinned, let app, app.processIdentifier != ProcessInfo.processInfo.processIdentifier, app.activationPolicy == .regular else { return }
         if frontmost?.processIdentifier != app.processIdentifier {
             frontmost = app
             frontmostMenus = []
