@@ -21,6 +21,11 @@ fi
 
 if [ $# -ge 1 ]; then
   VERSION="$1"
+  # Before the bump is committed and pushed: another session may have shipped it already.
+  if gh release view "v${VERSION}" >/dev/null 2>&1; then
+    echo "Release v${VERSION} already exists. Pick the next version." >&2
+    exit 1
+  fi
   CURRENT=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Resources/Info.plist)
   if [ "${VERSION}" != "${CURRENT}" ]; then
     echo "==> Setting version to ${VERSION}"
