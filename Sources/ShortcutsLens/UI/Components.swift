@@ -20,7 +20,7 @@ struct Keycaps: View {
     var body: some View {
         HStack(spacing: size == .large ? 4 : 2.5) {
             ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
-                Text(part)
+                KeyText.text(part)
                     .font(.system(size: fontSize, weight: .medium, design: .rounded))
                     .padding(.horizontal, part.count > 1 ? fontSize * 0.45 : 0)
                     .frame(minWidth: fontSize * 1.75, minHeight: fontSize * 1.75)
@@ -44,6 +44,48 @@ struct Keycaps: View {
     }
 }
 
+/// A shortcut as one compact label on the right of a row, the way menus show it: ⌃⌥⌘2.
+struct KeyLabel: View {
+    let combo: KeyCombo
+    var dimmed = false
+
+    var body: some View {
+        KeyText.text(combo.display)
+            .font(.system(size: 13, weight: .medium))
+            .tracking(1)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color(nsColor: .controlBackgroundColor)))
+            .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(Color.primary.opacity(0.16), lineWidth: 0.5))
+            .opacity(dimmed ? 0.45 : 1)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(combo.spoken)
+            .help(combo.spoken)
+    }
+}
+
+/// Shortcut text with the 🌐 and 🎤 keys drawn as SF Symbols, so they match the letters
+/// around them instead of showing as color emoji.
+enum KeyText {
+    static func text(_ string: String) -> Text {
+        var result = Text(verbatim: "")
+        var run = ""
+        for character in string {
+            let symbol: String? = switch character {
+            case "🌐": "globe"
+            case "🎤": "mic"
+            default: nil
+            }
+            guard let symbol else { run.append(character); continue }
+            result = Text("\(result)\(run)\(Image(systemName: symbol))")
+            run = ""
+        }
+        return run.isEmpty ? result : Text("\(result)\(run)")
+    }
+}
+
 /// One shortcut in a list.
 struct ShortcutRow: View {
     let entry: ShortcutEntry
@@ -52,8 +94,6 @@ struct ShortcutRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Keycaps(combo: entry.combo, dimmed: !entry.enabled)
-                .frame(width: 128, alignment: .leading)
             VStack(alignment: .leading, spacing: 1) {
                 Text(entry.title).lineLimit(1).foregroundStyle(entry.enabled ? .primary : .secondary)
                 if let subtitle {
@@ -62,6 +102,7 @@ struct ShortcutRow: View {
             }
             Spacer(minLength: 4)
             badges
+            KeyLabel(combo: entry.combo, dimmed: !entry.enabled)
         }
         .padding(.vertical, 2)
         .contentShape(Rectangle())
@@ -73,7 +114,10 @@ struct ShortcutRow: View {
         if showOwner { parts.append(entry.ownerName) }
         if let gesture = entry.gestureTitle, entry.title.range(of: gesture, options: .caseInsensitive) == nil { parts.append(gesture) }
         if let category = entry.category, category != entry.ownerName, entry.source != .appMenus { parts.append(category) }
-        if let path = entry.menuPath, entry.source == .appMenus { parts.append(path) }
+        if let path = entry.menuPath, entry.source == .appMenus {
+            let between = path.components(separatedBy: " › ").dropFirst().dropLast()
+            if !between.isEmpty { parts.append(between.joined(separator: " › ")) }
+        }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
@@ -133,7 +177,11 @@ struct ShortcutInspector: View {
                         Label("Also on \(entry.combo.display)", systemImage: "exclamationmark.triangle.fill")
                             .foregroundStyle(.orange).font(.headline)
                         ForEach(partners) { other in
-                            Text("\(other.ownerName): \(other.title)")
+                            Label {
+                                Text("\(other.ownerName): \(other.title)")
+                            } icon: {
+                                Image(nsImage: store.icon(for: other.ownerID)).resizable().frame(width: 16, height: 16)
+                            }
                         }
                         Text("Only one of them gets the keys: usually whichever registered them first. Change one of them so both work.")
                             .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -158,13 +206,8 @@ struct ShortcutInspector: View {
 
     @ViewBuilder private var actions: some View {
         VStack(alignment: .leading, spacing: 8) {
-            switch entry.source {
-            case .macOS, .services, .menuOverride, .builtIn:
-                Button("Open Keyboard Shortcuts Settings…") { Actions.openKeyboardSettings() }
-            case .appSettings, .appReport, .appMenus:
-                if let url = store.apps[entry.ownerID]?.url ?? NSWorkspace.shared.urlForApplication(withBundleIdentifier: entry.ownerID) {
-                    Button("Open \(entry.ownerName)") { NSWorkspace.shared.openApplication(at: url, configuration: .init()) }
-                }
+            if let action = Actions.changeAction(for: entry) {
+                Button(action.title, action: action.run)
             }
             HStack {
                 Button("Copy") { Actions.copy(entry) }
@@ -187,7 +230,35 @@ enum Actions {
     }
 
     static func copy(_ entry: ShortcutEntry) {
-        copy("\(entry.combo.display)  \(entry.title) (\(entry.ownerName))")
+        copy(line(for: entry))
+    }
+
+    /// Edit › Copy (⌘C) in a list: the selected shortcut, as Copy in its menu writes it.
+    static func providers(for selection: ShortcutEntry.ID?, in entries: [ShortcutEntry]) -> [NSItemProvider] {
+        guard let entry = entries.first(where: { $0.id == selection }) else { return [] }
+        return [NSItemProvider(object: line(for: entry) as NSString)]
+    }
+
+    static func line(for entry: ShortcutEntry) -> String {
+        "\(entry.combo.display)  \(entry.title) (\(entry.ownerName))"
+    }
+
+    struct ChangeAction {
+        let title: String
+        let run: () -> Void
+    }
+
+    /// The button that leads to where a shortcut is changed: Keyboard settings for macOS's,
+    /// the app itself for an app's.
+    static func changeAction(for entry: ShortcutEntry) -> ChangeAction? {
+        switch entry.source {
+        case .macOS, .services, .menuOverride, .builtIn:
+            return ChangeAction(title: "Open Keyboard Shortcuts Settings…") { openKeyboardSettings() }
+        case .appSettings, .appReport, .appMenus:
+            guard let url = ShortcutStore.shared.apps[entry.ownerID]?.url
+                ?? NSWorkspace.shared.urlForApplication(withBundleIdentifier: entry.ownerID) else { return nil }
+            return ChangeAction(title: "Open \(entry.ownerName)") { NSWorkspace.shared.openApplication(at: url, configuration: .init()) }
+        }
     }
 
     static func copy(_ text: String) {

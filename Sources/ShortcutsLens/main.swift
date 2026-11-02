@@ -21,7 +21,7 @@ enum QuitConfirmation {
 
 /// Launch, menus, the menu bar item, the Dock menu, and reopening.
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemValidation {
     private var statusItem: NSStatusItem?
     /// Links that arrive while ShortcutsLens is still launching; nil once launching is done.
     private var pendingURLs: [URL]? = []
@@ -192,6 +192,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         view.addItem(item("Find a Free Shortcut", #selector(showFree), key: "4"))
         view.addItem(item("App in Front", #selector(showFrontmost), key: "5"))
         view.addItem(.separator())
+        view.addItem(item("Rescan", #selector(rescan), key: "r"))
+        view.addItem(item("Show Turned-Off Shortcuts", #selector(toggleShowDisabled)))
+        view.addItem(item("Only Conflicts", #selector(toggleOnlyConflicts)))
+        view.addItem(item("Only Apps That Are Running", #selector(toggleOnlyRunning)))
+        view.addItem(.separator())
+        let sidebar = item("Hide Sidebar", #selector(toggleSidebar), key: "s")
+        sidebar.keyEquivalentModifierMask = [.control, .command]
+        view.addItem(sidebar)
+        let inspector = item("Hide Inspector", #selector(toggleInspector), key: "i")
+        inspector.keyEquivalentModifierMask = [.control, .command]
+        view.addItem(inspector)
+        view.addItem(.separator())
         view.addItem(item("Quick View", #selector(showQuickView)))
         viewItem.submenu = view
         main.addItem(viewItem)
@@ -287,6 +299,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc func showFree() { MainWindow.shared.show(.free) }
     @objc func showFrontmost() { MainWindow.shared.show(.frontmost) }
     @objc func showQuickView() { QuickView.shared.show() }
+    @objc func rescan() { MainWindow.shared.rescan() }
+    @objc func toggleShowDisabled() { Preferences.shared.showDisabled.toggle() }
+    @objc func toggleOnlyConflicts() { MainWindow.shared.state.onlyConflicts.toggle(); MainWindow.shared.show() }
+    @objc func toggleOnlyRunning() { MainWindow.shared.state.onlyRunning.toggle(); MainWindow.shared.show() }
+    @objc func toggleSidebar() { MainWindow.shared.toggleSidebar() }
+    @objc func toggleInspector() { MainWindow.shared.toggleInspector() }
+
+    /// Check marks and Show/Hide titles that follow the window's state.
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        let state = MainWindow.shared.state
+        switch menuItem.action {
+        case #selector(toggleShowDisabled): menuItem.state = Preferences.shared.showDisabled ? .on : .off
+        case #selector(toggleOnlyConflicts): menuItem.state = state.onlyConflicts ? .on : .off
+        case #selector(toggleOnlyRunning): menuItem.state = state.onlyRunning ? .on : .off
+        case #selector(toggleSidebar):
+            menuItem.title = state.sidebarShown ? "Hide Sidebar" : "Show Sidebar"
+            return MainWindow.shared.isVisible
+        case #selector(toggleInspector):
+            menuItem.title = state.showInspector ? "Hide Inspector" : "Show Inspector"
+            return MainWindow.shared.isVisible
+        default: break
+        }
+        return true
+    }
     @objc func showSettings() { SettingsWindow.shared.show() }
     @objc func showHelp() { HelpWindow.shared.show() }
     @objc func checkForUpdates() { UpdateController.checkForUpdates() }

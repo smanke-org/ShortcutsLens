@@ -170,6 +170,7 @@ struct QuickViewContent: View {
             .pickerStyle(.segmented)
             .labelsHidden()
             .frame(maxWidth: 440)
+            .background { tabKeys }
             Spacer()
             if view.interactive {
                 TextField("Search", text: $view.search, prompt: Text("Search names or keys"))
@@ -180,6 +181,18 @@ struct QuickViewContent: View {
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 12)
+    }
+
+    /// ⌘1, ⌘2 and ⌘3 switch tabs, as the footer says.
+    private var tabKeys: some View {
+        ZStack {
+            Button("") { view.tab = .app }.keyboardShortcut("1")
+            Button("") { view.tab = .system }.keyboardShortcut("2")
+            Button("") { view.tab = .conflicts }.keyboardShortcut("3")
+        }
+        .opacity(0)
+        .frame(width: 0, height: 0)
+        .accessibilityHidden(true)
     }
 
     @ViewBuilder private var content: some View {
@@ -226,15 +239,17 @@ struct QuickViewContent: View {
         VStack(alignment: .leading, spacing: 5) {
             Text(section.title).font(.headline).lineLimit(1)
             ForEach(section.entries) { entry in
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(entry.combo.display)
-                        .font(.system(size: 12.5, weight: .medium, design: .rounded))
+                let conflict = !store.partners(of: entry).isEmpty
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    // One size and weight for every shortcut, right-aligned so the names line up.
+                    Text("\(conflict ? Text(Image(systemName: "exclamationmark.triangle.fill")) : Text(verbatim: ""))\(conflict ? " " : "")\(KeyText.text(entry.combo.display))")
+                        .font(.system(size: 13, weight: .medium))
+                        .tracking(1)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .frame(width: 84, alignment: .trailing)
-                        .foregroundStyle(store.partners(of: entry).isEmpty ? Color.primary : Color.orange)
+                        .frame(width: 104, alignment: .trailing)
+                        .foregroundStyle(conflict ? Color.orange : Color.secondary)
                     Text(view.tab == .conflicts ? "\(entry.ownerName): \(entry.title)" : entry.title)
-                        .lineLimit(1).foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
                 .font(.callout)
                 .accessibilityElement(children: .combine)
@@ -243,8 +258,14 @@ struct QuickViewContent: View {
     }
 
     private var footer: some View {
-        HStack {
-            Text(view.interactive ? "esc to close" : "Let go of ⌘ to close").foregroundStyle(.secondary)
+        HStack(spacing: 16) {
+            if view.interactive {
+                hint(["Esc"], "closes")
+                if let key = Preferences.shared.quickViewHotKey { hint([key.display], "opens and closes") }
+                hint(["⌘1", "⌘2", "⌘3"], "switch tabs")
+            } else {
+                Text("Let go of ⌘ to close").foregroundStyle(.secondary)
+            }
             Spacer()
             if view.interactive {
                 Button("Open ShortcutsLens") { view.close(); MainWindow.shared.show() }
@@ -254,5 +275,16 @@ struct QuickViewContent: View {
         .font(.caption)
         .padding(.horizontal, 18)
         .padding(.vertical, 8)
+    }
+
+    private func hint(_ keys: [String], _ what: String) -> some View {
+        HStack(spacing: 4) {
+            ForEach(keys, id: \.self) { key in
+                KeyText.text(key).fontWeight(.medium)
+                    .padding(.horizontal, 5).padding(.vertical, 1)
+                    .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(Color.primary.opacity(0.2), lineWidth: 0.5))
+            }
+            Text(what).foregroundStyle(.secondary)
+        }
     }
 }

@@ -23,6 +23,7 @@ enum DebugHooks {
 
     /// `SHORTCUTSLENS_DEBUG_DUMP=<file>` writes every shortcut found and the conflicts to a
     /// text file once the scan is done, then quits.
+    /// `SHORTCUTSLENS_DEBUG_PICK_KEY=<key code>` clicks that key on the Keyboard Map; `_NO_INSPECTOR` closes the inspector.
     /// `SHORTCUTSLENS_DEBUG_SHOW=<all|conflicts|keyboard|free|frontmost|macOS|app:<id>|quickview|settings:<pane>|help[:<topic>]>`
     /// opens that page; with `SHORTCUTSLENS_DEBUG_SNAPSHOT=<png>` it draws the window to the
     /// file and quits.
@@ -60,9 +61,25 @@ enum DebugHooks {
                 if let select = env["SHORTCUTSLENS_DEBUG_SELECT"] {
                     MainWindow.shared.state.selection = ShortcutStore.shared.all.first { $0.id.contains(select) }?.id
                 }
+                if let key = env["SHORTCUTSLENS_DEBUG_PICK_KEY"].flatMap(Int.init) { MainWindow.shared.state.pickedKey = key }
+                if env["SHORTCUTSLENS_DEBUG_NO_INSPECTOR"] != nil { MainWindow.shared.state.showInspector = false }
                 window = MainWindow.shared.debugWindow
             }
             guard let png = env["SHORTCUTSLENS_DEBUG_SNAPSHOT"] else { return }
+            // `SHORTCUTSLENS_DEBUG_SIZE=820x600`: the window at that content size, to check narrow layouts.
+            // Set just before the shot, since a window manager may resize a new window after launch.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                // Not the Quick View: hiding it closes it, and it would come back as a peek.
+                if show != "quickview", let size = env["SHORTCUTSLENS_DEBUG_SIZE"]?.split(separator: "x").compactMap({ Double($0) }), size.count == 2 {
+                    // Off screen first: macOS 27 ignores a new frame for a window that's showing.
+                    if let window {
+                        window.orderOut(nil)
+                        window.setContentSize(NSSize(width: size[0], height: size[1]))
+                        window.center()
+                        window.makeKeyAndOrderFront(nil)
+                    }
+                }
+            }
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
                 // A ".wid" file gets the window number, for `screencapture -l`, which draws
                 // the sidebar's vibrancy that cacheDisplay leaves blank.

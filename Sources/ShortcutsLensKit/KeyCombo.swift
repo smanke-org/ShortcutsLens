@@ -211,6 +211,8 @@ public enum KeyNames {
             124: .init(glyph: "→", name: "Right Arrow"), 125: .init(glyph: "↓", name: "Down Arrow"),
             126: .init(glyph: "↑", name: "Up Arrow"), 114: .init(glyph: "Help", name: "Help"),
             57: .init(glyph: "⇪", name: "Caps Lock"),
+            // What menus report for Start Dictation's key (the 🎤 key on newer keyboards).
+            128: .init(glyph: "🎤", name: "Dictation"),
             65: .init(glyph: "Pad.", name: "Keypad Decimal"), 67: .init(glyph: "Pad*", name: "Keypad Multiply"),
             69: .init(glyph: "Pad+", name: "Keypad Plus"), 71: .init(glyph: "Clear", name: "Keypad Clear"),
             75: .init(glyph: "Pad/", name: "Keypad Divide"), 78: .init(glyph: "Pad-", name: "Keypad Minus"),
