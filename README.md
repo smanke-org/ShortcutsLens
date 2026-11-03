@@ -60,6 +60,31 @@ ShortcutsLens checks GitHub for new versions once a day (change how often, or tu
 
 `shortcutslens://open`, `shortcutslens://quickview`, `shortcutslens://conflicts`, `shortcutslens://keyboard`, `shortcutslens://free` and `shortcutslens://settings` open those pages, for ToolHUD buttons, Shortcuts and scripts.
 
+### Command line and AI agents
+
+ShortcutsLens is also a command line tool, so scripts and AI agents (Claude Code, Codex) can search your shortcuts
+by app, keys or source, list the conflicts, check whether a key combination is free, suggest free ones, and hide
+shortcuts from the lists. Commands run in the open app, so the answers match what the window shows. Link it once
+to type `shortcutslens`:
+
+```bash
+ln -s /Applications/ShortcutsLens.app/Contents/MacOS/ShortcutsLens ~/.local/bin/shortcutslens
+```
+
+```bash
+shortcutslens help
+shortcutslens shortcuts list --search screenshot --json
+shortcutslens keys check "ctrl+opt+cmd+k"
+shortcutslens conflicts list --app "Example App"
+```
+
+Every command takes `--json`. For MCP apps such as Claude Desktop, the same commands are served by
+`/Applications/ShortcutsLens.app/Contents/MacOS/ShortcutsLens mcp`:
+
+```bash
+claude mcp add --scope user shortcutslens -- /Applications/ShortcutsLens.app/Contents/MacOS/ShortcutsLens mcp
+```
+
 ## Building
 
 ```bash

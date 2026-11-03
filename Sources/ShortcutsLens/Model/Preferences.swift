@@ -50,10 +50,22 @@ final class Preferences {
     var confirmQuit: Bool { didSet { save(Keys.confirmQuit, confirmQuit) } }
 
     @ObservationIgnored private var loading = false
-    private var defaults: UserDefaults { .standard }
+    private var defaults: UserDefaults { Self.store }
+
+    /// UserDefaults.standard, except in an agent CLI test copy (a Debug build run with
+    /// APP_STORE), which keeps its settings in a suite of its own and never touches the
+    /// installed app's.
+    static let store: UserDefaults = {
+        #if DEBUG
+        if AgentSocket.isTestRun, let suite = UserDefaults(suiteName: testSuite) { return suite }
+        #endif
+        return .standard
+    }()
+
+    static let testSuite = "com.smanke.ShortcutsLens.agenttest"
 
     private init() {
-        let d = UserDefaults.standard
+        let d = Self.store
         d.register(defaults: [Keys.holdCommand: false, Keys.showDisabled: true, Keys.scanSandboxed: false, Keys.confirmQuit: true,
                               Keys.quickViewStartsOn: StartPage.frontmostApp.rawValue])
         // A saved copy of 1.0.0's default follows the default to its new keys, once.
@@ -87,7 +99,7 @@ final class Preferences {
     }
 
     private static func storedHotKey() -> KeyCombo? {
-        let d = UserDefaults.standard
+        let d = store
         return d.object(forKey: Keys.quickViewHotKey) == nil ? defaultHotKey : decode(d.string(forKey: Keys.quickViewHotKey))
     }
 

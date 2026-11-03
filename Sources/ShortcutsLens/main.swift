@@ -2,10 +2,14 @@ import AppKit
 import ShortcutsLensKit
 import SwiftUI
 
+// `shortcutslens <command>` (the app binary under a short name): run it against the running
+// app and exit, without starting a second copy. See Agent/AgentCLI.swift.
+if let code = AgentCLI.runIfRequested() { exit(code) }
+
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate
-app.setActivationPolicy(AppPresence.showInDock ? .regular : .accessory)
+app.setActivationPolicy(AppPresence.showInDock && !AgentSocket.isTestRun ? .regular : .accessory)
 app.run()
 
 /// Quits ShortcutsLens without asking: for quitting itself (installing an update, ending a test).
@@ -28,6 +32,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.mainMenu = makeMainMenu()
+
+        #if DEBUG
+        // A test run of the agent CLI (APP_STORE): its own settings, reports from the test
+        // folder, and the agent socket. Nothing else starts: no sync, Quick View hotkey, menu
+        // bar item, ToolHUD menu hub, report requests, or updater.
+        if AgentSocket.isTestRun {
+            ShortcutStore.shared.start()
+            AgentSocket.listen { await AgentRouter.handle($0) }
+            return
+        }
+        #endif
         AppAppearance.start()
 
         #if DEBUG
@@ -59,6 +74,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
         #if DEBUG
         if DebugHooks.run() { return }
         #endif
+
+        // `shortcutslens` and the MCP server talk to the app through this.
+        AgentSocket.listen { await AgentRouter.handle($0) }
 
         AutoUpdater.shared.start()
         UserDefaults.standard.set(true, forKey: "launchedBefore")

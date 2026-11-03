@@ -117,6 +117,11 @@ final class SettingsSync {
 
     /// Called whenever a synced setting really changes on this Mac.
     func localDidChange() {
+        #if DEBUG
+        // An agent CLI test copy has settings of its own, which never sync (and the sync
+        // timestamp lives in the installed app's defaults).
+        if AgentSocket.isTestRun { return }
+        #endif
         guard !applying else { return }
         localModified = Self.now
         guard started else { return }

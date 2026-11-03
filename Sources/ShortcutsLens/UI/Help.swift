@@ -144,7 +144,7 @@ enum Help {
             .text("Settings › Updates chooses whether new versions install by themselves, ask first, or wait for Check Now, and how often to check: once a day, or on a schedule you set, from every hour to once a year. An automatic update waits until the Quick View is closed and the Mac has been idle for two minutes. What's New… shows the notes for recent versions."),
         ]),
 
-        HelpTopic(id: "links", title: "Links and ToolHUD", symbol: "link", blocks: [
+        HelpTopic(id: "links", title: "Links, ToolHUD and the Command Line", symbol: "link", blocks: [
             .text("ToolHUD buttons, Shortcuts and scripts can open ShortcutsLens pages with links:"),
             .keys([
                 ("shortcutslens://open", "The window"),
@@ -154,6 +154,16 @@ enum Help {
                 ("shortcutslens://free", "Find a Free Shortcut"),
                 ("shortcutslens://settings", "Settings"),
             ]),
+            .heading("Command line and AI agents"),
+            .text("ShortcutsLens is also a command line tool, so scripts and AI agents such as Claude Code or Codex can search your shortcuts by app, keys or source, list the conflicts, check whether a key combination is free, suggest free ones, and hide shortcuts from the lists. Commands run in the open app, so the answers match what the window shows."),
+            .keys([
+                ("shortcutslens help", "List every command and its options"),
+                ("shortcutslens shortcuts list --search screenshot", "Find shortcuts, as the window's search does"),
+                ("shortcutslens keys check \"ctrl+opt+cmd+k\"", "Is it free? Everything that uses those keys"),
+                ("shortcutslens conflicts list", "Keys that two or more shortcuts claim"),
+                ("shortcutslens mcp", "Offer the same commands to MCP apps, such as Claude Desktop"),
+            ]),
+            .text("To type shortcutslens in Terminal, link it once: ln -s /Applications/ShortcutsLens.app/Contents/MacOS/ShortcutsLens ~/.local/bin/shortcutslens (with ~/.local/bin on your PATH). MCP apps take the full path to that program, followed by mcp."),
         ]),
 
         HelpTopic(id: "troubleshooting", title: "Troubleshooting", symbol: "wrench.and.screwdriver", blocks: [

@@ -32,10 +32,16 @@ final class ShortcutStore {
     @ObservationIgnored private var observers: [NSObjectProtocol] = []
     @ObservationIgnored private var rescanPending = false
     @ObservationIgnored private var frontmostPinned = false
+    /// An agent CLI test copy (Debug, APP_STORE): it reads this Mac's shortcut sources but
+    /// never asks apps for reports or listens for them; reports come from the test folder.
+    @ObservationIgnored private var testRun = false
 
     private init() {}
 
     func start() {
+        #if DEBUG
+        testRun = AgentSocket.isTestRun
+        #endif
         KeyboardLayout.install()
         running = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
         noteFrontmost(NSWorkspace.shared.frontmostApplication)
@@ -72,13 +78,18 @@ final class ShortcutStore {
                                                                 object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { KeyboardLayout.install(); ShortcutStore.shared.rebuild() }
         })
-        observers.append(DistributedNotificationCenter.default().addObserver(forName: .init(ShortcutReports.report), object: nil,
-                                                                             queue: .main) { note in
-            let sender = note.object as? String
-            let info = note.userInfo ?? [:]
-            guard let sender, let entries = ShortcutReports.entries(sender: sender, userInfo: info) else { return }
-            MainActor.assumeIsolated { ShortcutStore.shared.received(entries, from: sender) }
-        })
+        if !testRun {
+            observers.append(DistributedNotificationCenter.default().addObserver(forName: .init(ShortcutReports.report), object: nil,
+                                                                                 queue: .main) { note in
+                let sender = note.object as? String
+                let info = note.userInfo ?? [:]
+                guard let sender, let entries = ShortcutReports.entries(sender: sender, userInfo: info) else { return }
+                MainActor.assumeIsolated { ShortcutStore.shared.received(entries, from: sender) }
+            })
+        }
+        #if DEBUG
+        if testRun { loadTestReports() }
+        #endif
         refresh()
     }
 
@@ -107,6 +118,7 @@ final class ShortcutStore {
     }
 
     func askForReports() {
+        guard !testRun else { return }
         DistributedNotificationCenter.default().postNotificationName(.init(ShortcutReports.request), object: Bundle.main.bundleIdentifier,
                                                                      userInfo: nil, deliverImmediately: true)
     }
@@ -116,6 +128,19 @@ final class ShortcutStore {
         if apps[sender] == nil, let record = SystemSources.app(for: sender, sandboxed: false) { apps[sender] = record }
         rebuild()
     }
+
+    #if DEBUG
+    /// A test copy's reports: `<APP_STORE>/reports.json`, `{"<bundle id>": <a report's userInfo>}`,
+    /// read as if each app had sent it.
+    private func loadTestReports() {
+        guard let folder = ProcessInfo.processInfo.environment["APP_STORE"],
+              let data = FileManager.default.contents(atPath: folder + "/reports.json"),
+              let all = (try? JSONSerialization.jsonObject(with: data)) as? [String: [String: Any]] else { return }
+        for (sender, info) in all {
+            if let entries = ShortcutReports.entries(sender: sender, userInfo: info) { received(entries, from: sender) }
+        }
+    }
+    #endif
 
     private func appLaunched(_ id: String?) {
         guard let id else { return }
