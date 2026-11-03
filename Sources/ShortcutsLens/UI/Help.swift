@@ -141,7 +141,7 @@ enum Help {
 
         HelpTopic(id: "sync", title: "Sync and Updates", symbol: "icloud", blocks: [
             .text("Turn on sync in Settings › Sync to keep the Quick View shortcut, options, hidden shortcuts and apps, appearance and update choice the same on every Mac signed in to your iCloud account. Open at login stays per Mac."),
-            .text("Settings › Updates chooses whether new versions install by themselves, ask first, or wait for Check Now, and how often to check: once a day, or on a schedule you set, from every hour to once a year. An automatic update waits until the Quick View is closed and the Mac has been idle for two minutes. What's New… shows the notes for recent versions."),
+            .text("Settings › Updates chooses whether new versions install by themselves, ask first, or wait for Check Now, and how often to check: once a day, or on a schedule you set, from every hour to once a year. An automatic update waits until the Quick View is closed and the Mac has been idle for two minutes. What's New… shows the notes for recent versions, and About ShortcutsLens shows the last 10 releases."),
         ]),
 
         HelpTopic(id: "links", title: "Links, ToolHUD and the Command Line", symbol: "link", blocks: [
