@@ -238,28 +238,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenu
             quick.keyEquivalent = String(key)
             quick.keyEquivalentModifierMask = NSEvent.ModifierFlags(rawValue: UInt(combo.modifiers.cocoa))
         }
-        quick.image = NSImage(systemSymbolName: "rectangle.on.rectangle", accessibilityDescription: nil)
-        menu.addItem(quick)
-        menu.addItem(item("Open ShortcutsLens", #selector(showWindow)))
+        menu.addItem(quick.showIcon("rectangle.on.rectangle"))
+        menu.addItem(item("Open ShortcutsLens", #selector(showWindow)).showIcon("macwindow"))
         let conflicts = store.conflicts.count
         let conflictItem = item(conflicts == 0 ? "No Conflicts" : "\(conflicts) Conflict\(conflicts == 1 ? "" : "s")…", #selector(showConflicts))
-        conflictItem.image = NSImage(systemSymbolName: conflicts == 0 ? "checkmark.circle" : "exclamationmark.triangle",
-                                     accessibilityDescription: nil)
-        menu.addItem(conflictItem)
+        menu.addItem(conflictItem.showIcon(conflicts == 0 ? "checkmark.circle" : "exclamationmark.triangle"))
         menu.addItem(item("Keyboard Map", #selector(showKeyboard)))
         menu.addItem(item("Find a Free Shortcut", #selector(showFree)))
         menu.addItem(.separator())
         let helpEntry = item("ShortcutsLens Help", #selector(showHelp))
         helpEntry.image = NSImage(systemSymbolName: "questionmark.circle", accessibilityDescription: nil)
         menu.addItem(helpEntry)
-        menu.addItem(item("Settings…", #selector(showSettings), key: ","))
+        menu.addItem(item("Settings…", #selector(showSettings), key: ",").showIcon("gearshape"))
         menu.addItem(.separator())
         if let staged = AutoUpdater.shared.staged {
-            menu.addItem(item("Update to \(staged.version) Now (Otherwise Installs When Idle)", #selector(installUpdateNow)))
+            menu.addItem(item("Update to \(staged.version) Now (Otherwise Installs When Idle)", #selector(installUpdateNow)).showIcon("arrow.down.circle"))
         } else if let pending = UpdateAvailability.shared.pending {
-            menu.addItem(item("Update to \(pending)…", #selector(checkForUpdates)))
+            menu.addItem(item("Update to \(pending)…", #selector(checkForUpdates)).showIcon("arrow.down.circle"))
         } else {
-            menu.addItem(item("Check for Updates…", #selector(checkForUpdates)))
+            menu.addItem(item("Check for Updates…", #selector(checkForUpdates)).showIcon("arrow.down.circle"))
         }
         menu.addItem(item("About ShortcutsLens", #selector(showAbout)))
         menu.addItem(item("Our other apps…", #selector(showOtherApps)))
