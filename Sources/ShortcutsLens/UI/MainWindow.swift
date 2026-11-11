@@ -48,6 +48,9 @@ final class WindowState {
     var pickedKey: Int?
     var includeMenus = false
     var freeCheck: KeyCombo?
+    /// What's chosen in Check a Shortcut: the modifier buttons and the typed key.
+    var checkModifiers: Modifiers = []
+    var checkKey = ""
 
     var sidebarShown: Bool { columns != .detailOnly }
 }
@@ -236,7 +239,7 @@ struct MainView: View {
         var list = list
         if state.onlyConflicts { list = list.filter { !store.partners(of: $0).isEmpty } }
         if state.onlyRunning {
-            list = list.filter { !(($0.source == .appSettings || $0.source == .appReport) && !store.isRunning($0.ownerID)) }
+            list = list.filter { !($0.source.needsApp && !store.isRunning($0.ownerID)) }
         }
         return list
     }

@@ -259,14 +259,25 @@ public enum KeyEquivalentParser {
         return KeyCombo(keyCode: code, modifiers: mods)
     }
 
-    static func keyCode(named name: String) -> Int? {
-        if name.count == 1, let ch = name.first { return KeyNames.keyCode(for: ch) }
+    /// A key by what's printed on it or its name: "C", "5", "F5", "Space", "←", "Left".
+    public static func keyCode(named name: String) -> Int? {
+        if name.count == 1, let ch = name.first {
+            // The current layout first (so an AZERTY "A" is the key that types A), then US.
+            if let layoutName = KeyNames.layoutName {
+                let wanted = String(ch).uppercased()
+                if let code = (0..<128).first(where: { KeyNames.special[$0] == nil && layoutName($0)?.uppercased() == wanted }) {
+                    return code
+                }
+            }
+            return KeyNames.keyCode(for: ch)
+        }
         let lower = name.lowercased()
         if let match = KeyNames.special.first(where: { $0.value.glyph.lowercased() == lower || $0.value.name.lowercased() == lower }) {
             return match.key
         }
         let aliases = ["space": 49, "return": 36, "enter": 36, "esc": 53, "escape": 53, "tab": 48, "delete": 51, "backspace": 51,
-                       "left": 123, "right": 124, "down": 125, "up": 126]
+                       "left": 123, "right": 124, "down": 125, "up": 126, "forward delete": 117, "del": 117,
+                       "home": 115, "end": 119, "page up": 116, "pageup": 116, "page down": 121, "pagedown": 121]
         return aliases[lower]
     }
 }

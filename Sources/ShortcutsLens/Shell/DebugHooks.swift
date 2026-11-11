@@ -62,6 +62,10 @@ enum DebugHooks {
                     MainWindow.shared.state.selection = ShortcutStore.shared.all.first { $0.id.contains(select) }?.id
                 }
                 if let key = env["SHORTCUTSLENS_DEBUG_PICK_KEY"].flatMap(Int.init) { MainWindow.shared.state.pickedKey = key }
+                // `SHORTCUTSLENS_DEBUG_CHECK=⌃⇧C` types that into Check a Shortcut's key box.
+                if let check = env["SHORTCUTSLENS_DEBUG_CHECK"] {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { MainWindow.shared.state.checkKey = check }
+                }
                 if env["SHORTCUTSLENS_DEBUG_NO_INSPECTOR"] != nil { MainWindow.shared.state.showInspector = false }
                 window = MainWindow.shared.debugWindow
             }

@@ -189,18 +189,68 @@ struct FreeShortcutsView: View {
         }
     }
 
+    /// Modifier buttons plus a typed key, not a recorder: a shortcut another app holds never
+    /// reaches ShortcutsLens as a key press, so recording can't check the taken ones.
     private var test: some View {
-        VStack(spacing: 12) {
-            Text("Press a shortcut to test it").foregroundStyle(.secondary)
-            ShortcutRecorder(combo: $state.freeCheck, placeholder: "Click, then press keys", requireModifier: false)
-                .controlSize(.large)
-                .frame(width: 260)
-            if let check = state.freeCheck {
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    ComboUsage(combo: check)
-                    Button("Copy") { copy(check) }.controlSize(.small)
+        VStack(spacing: 14) {
+            Text("Check a shortcut").font(.headline)
+            HStack(spacing: 6) {
+                ForEach(Modifiers.ordered, id: \.rawValue) { mod in
+                    Toggle(isOn: Binding(get: { state.checkModifiers.contains(mod) },
+                                         set: { on in
+                                             if on { state.checkModifiers.insert(mod) } else { state.checkModifiers.remove(mod) }
+                                             updateCheck()
+                                         })) {
+                        HStack(spacing: 4) {
+                            if mod == .function { Image(systemName: "globe") } else { Text(mod.symbol).fontWeight(.medium) }
+                            Text(mod == .function ? "fn" : mod.name)
+                        }
+                        .frame(minWidth: 64)
+                    }
+                    .toggleStyle(.button)
+                    .controlSize(.large)
+                    .accessibilityLabel(mod.name)
+                }
+                Text("+").foregroundStyle(.secondary).padding(.horizontal, 2)
+                TextField("Key", text: $state.checkKey)
+                    .textFieldStyle(.roundedBorder)
+                    .controlSize(.large)
+                    .multilineTextAlignment(.center)
+                    .frame(width: 90)
+                    .onSubmit(updateCheck)
+                    .onChange(of: state.checkKey) { updateCheck() }
+                    .accessibilityLabel("Key")
+                    .help("A letter, number or symbol, or a key name like F5, Space, Return, Tab, Esc, Delete or Left")
+                Menu {
+                    ForEach(Self.specialKeys, id: \.self) { code in
+                        Button(KeyNames.spokenName(for: code)) { state.checkKey = KeyNames.spokenName(for: code) }
+                    }
+                    Divider()
+                    ForEach(Array(KeyNames.functionKeys.prefix(12)), id: \.self) { code in
+                        Button(KeyNames.name(for: code)) { state.checkKey = KeyNames.name(for: code) }
+                    }
+                } label: {
+                    Image(systemName: "keyboard")
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+                .help("Pick a key that doesn't type a character")
+                .accessibilityLabel("Other keys")
+            }
+            .fixedSize()
+            SwiftUI.Group {
+                if let check = state.freeCheck {
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        ComboUsage(combo: check)
+                        Button("Copy") { copy(check) }.controlSize(.small)
+                    }
+                } else if keyUnreadable {
+                    Text("Type one key, like C, 5, F5 or Space.").foregroundStyle(.orange)
+                } else {
+                    Text("Choose the modifier keys, then type the key.").foregroundStyle(.secondary)
                 }
             }
+            .frame(minHeight: 22)
             Text("Checks every shortcut ShortcutsLens can see, including the menus of the app in front when Accessibility is allowed. Some apps keep their shortcuts where no other app can look, so a free result is a very good sign rather than a guarantee.")
                 .font(.caption).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -209,6 +259,28 @@ struct FreeShortcutsView: View {
         .padding(18)
         .frame(maxWidth: .infinity)
         .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.primary.opacity(0.045)))
+    }
+
+    static let specialKeys = [49, 36, 48, 53, 51, 117, 123, 124, 126, 125, 115, 119, 116, 121]
+
+    private var keyUnreadable: Bool {
+        let key = state.checkKey.trimmingCharacters(in: .whitespaces)
+        return !key.isEmpty && state.freeCheck == nil
+    }
+
+    /// Reads the key field. A pasted whole shortcut ("⌃⇧C", "ctrl+shift+c") sets the buttons too.
+    private func updateCheck() {
+        let key = state.checkKey.trimmingCharacters(in: .whitespaces)
+        if key.count > 1, let whole = KeyEquivalentParser.parseReadable(key), let code = whole.keyCode {
+            state.checkModifiers = whole.modifiers
+            state.checkKey = KeyNames.name(for: code)
+            return  // the field's change runs this again with just the key
+        }
+        guard !key.isEmpty, let code = KeyEquivalentParser.keyCode(named: key) else {
+            state.freeCheck = nil
+            return
+        }
+        state.freeCheck = KeyCombo(keyCode: code, modifiers: state.checkModifiers)
     }
 
     private func chip(_ combo: KeyCombo) -> some View {
