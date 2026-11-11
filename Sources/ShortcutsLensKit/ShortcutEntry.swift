@@ -16,6 +16,8 @@ public enum ShortcutSource: String, Codable, Sendable, CaseIterable {
     case appReport
     /// The frontmost app's menu bar, read through Accessibility.
     case appMenus
+    /// An app's usual default that it never writes down (`KnownDefaults`).
+    case knownDefault
 
     public var title: String {
         switch self {
@@ -26,13 +28,17 @@ public enum ShortcutSource: String, Codable, Sendable, CaseIterable {
         case .appSettings: "Found in the app's settings"
         case .appReport: "Reported by the app"
         case .appMenus: "App menus"
+        case .knownDefault: "The app's usual default"
         }
     }
 
     /// Whether the shortcut works everywhere rather than only inside one app.
+    /// Whether it belongs to an app that must be running for the keys to work.
+    public var needsApp: Bool { self == .appSettings || self == .appReport || self == .knownDefault }
+
     public var isGlobal: Bool {
         switch self {
-        case .macOS, .builtIn, .services, .appSettings, .appReport: true
+        case .macOS, .builtIn, .services, .appSettings, .appReport, .knownDefault: true
         case .menuOverride, .appMenus: false
         }
     }

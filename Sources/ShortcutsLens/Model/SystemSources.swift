@@ -44,6 +44,14 @@ enum SystemSources {
             entries += found
             apps[record.bundleID] = record
         }
+        // Usual defaults for apps that never write theirs down, when nothing better was found.
+        // (App Shortcuts menu overrides don't count: they say nothing about the global ones.)
+        let foundInSettings = Set(entries.filter { $0.source == .appSettings }.map(\.ownerID))
+        for known in KnownDefaults.apps where !foundInSettings.contains(known.bundleID) {
+            guard let record = apps[known.bundleID] ?? app(for: known.bundleID, sandboxed: false) else { continue }
+            entries += KnownDefaults.entries(for: known, appName: record.name)
+            apps[known.bundleID] = record
+        }
         return Result(entries: entries, apps: apps)
     }
 

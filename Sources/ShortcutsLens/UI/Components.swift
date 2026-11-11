@@ -132,7 +132,7 @@ struct ShortcutRow: View {
                 Text("Off").font(.caption2.weight(.semibold)).padding(.horizontal, 5).padding(.vertical, 1)
                     .background(Capsule().fill(Color.secondary.opacity(0.15)))
                     .help("Turned off")
-            } else if entry.source == .appSettings || entry.source == .appReport, !store.isRunning(entry.ownerID) {
+            } else if entry.source.needsApp, !store.isRunning(entry.ownerID) {
                 Image(systemName: "moon.zzz").foregroundStyle(.secondary)
                     .help("\(entry.ownerName) isn't running, so this shortcut does nothing until it opens.")
                     .accessibilityLabel("Not running")
@@ -140,6 +140,10 @@ struct ShortcutRow: View {
             if entry.source == .appSettings {
                 Image(systemName: "magnifyingglass").font(.caption).foregroundStyle(.tertiary)
                     .help("Found in \(entry.ownerName)'s settings")
+            } else if entry.source == .knownDefault {
+                Image(systemName: "questionmark.circle").font(.caption).foregroundStyle(.tertiary)
+                    .help("\(entry.ownerName)'s usual default. It may use other keys if you've changed it.")
+                    .accessibilityLabel("Usual default")
             }
         }
     }
@@ -198,7 +202,7 @@ struct ShortcutInspector: View {
 
     private var status: String {
         if !entry.enabled { return "Turned off" }
-        if entry.source == .appSettings || entry.source == .appReport {
+        if entry.source.needsApp {
             return store.isRunning(entry.ownerID) ? "On; \(entry.ownerName) is running" : "On, but \(entry.ownerName) isn't running"
         }
         return "On"
@@ -254,7 +258,7 @@ enum Actions {
         switch entry.source {
         case .macOS, .services, .menuOverride, .builtIn:
             return ChangeAction(title: "Open Keyboard Shortcuts Settings…") { openKeyboardSettings() }
-        case .appSettings, .appReport, .appMenus:
+        case .appSettings, .appReport, .appMenus, .knownDefault:
             guard let url = ShortcutStore.shared.apps[entry.ownerID]?.url
                 ?? NSWorkspace.shared.urlForApplication(withBundleIdentifier: entry.ownerID) else { return nil }
             return ChangeAction(title: "Open \(entry.ownerName)") { NSWorkspace.shared.openApplication(at: url, configuration: .init()) }

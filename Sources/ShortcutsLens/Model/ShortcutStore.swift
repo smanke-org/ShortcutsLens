@@ -169,7 +169,7 @@ final class ShortcutStore {
     /// Combines the scan and the reports, then finds conflicts.
     func rebuild() {
         var list = scanned.filter { entry in
-            !(entry.source == .appSettings && reports[entry.ownerID] != nil)
+            !((entry.source == .appSettings || entry.source == .knownDefault) && reports[entry.ownerID] != nil)
         }
         for (_, entries) in reports { list += entries }
         #if DEBUG
@@ -222,7 +222,7 @@ final class ShortcutStore {
 
     func isRunning(_ ownerID: String) -> Bool {
         ownerID == ShortcutEntry.macOSOwner || ownerID == ShortcutEntry.servicesOwner || ownerID == ShortcutEntry.allAppsOwner
-            || running.contains(ownerID)
+            || running.contains(ownerID) || KnownDefaults.helperIDs(for: ownerID).contains(where: running.contains)
     }
 
     /// Shortcuts on one combo, from every source including the frontmost app's menus.

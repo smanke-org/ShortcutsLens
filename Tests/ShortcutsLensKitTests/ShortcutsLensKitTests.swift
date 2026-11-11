@@ -291,3 +291,26 @@ import Testing
         #expect(!e.matches("spotlight"))
     }
 }
+
+@Suite struct KnownDefaultsTests {
+    @Test func snagitCaptureIsControlShiftC() throws {
+        let snagit = try #require(KnownDefaults.app("com.TechSmith.Snagit"))
+        let entries = KnownDefaults.entries(for: snagit, appName: "Snagit")
+        #expect(entries.first?.combo.display == "⌃⇧C")
+        #expect(entries.count == 5)
+        #expect(entries.allSatisfy { $0.source == .knownDefault && $0.source.isGlobal && $0.source.needsApp })
+        #expect(KnownDefaults.helperIDs(for: "com.TechSmith.Snagit") == ["com.techsmith.snagit.capturehelper"])
+    }
+
+    @Test func tableHasNoDuplicatesOrBareKeys() {
+        let ids = KnownDefaults.apps.map(\.bundleID)
+        #expect(Set(ids).count == ids.count)
+        for app in KnownDefaults.apps {
+            #expect(!app.shortcuts.isEmpty)
+            let combos = app.shortcuts.map { KeyCombo(keyCode: $0.keyCode, modifiers: $0.modifiers) }
+            #expect(Set(combos).count == combos.count, "\(app.bundleID) lists one combo twice")
+            for s in app.shortcuts { #expect(!s.modifiers.isEmpty, "\(app.bundleID) \(s.title)") }
+            #expect(Set(app.shortcuts.map(\.id)).count == app.shortcuts.count)
+        }
+    }
+}
