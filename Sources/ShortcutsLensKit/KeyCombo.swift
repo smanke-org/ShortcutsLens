@@ -234,3 +234,46 @@ public enum KeyNames {
         46: "m", 47: ".", 50: "`",
     ]
 }
+
+/// Writing shortcuts back in the forms macOS stores them.
+public enum KeyWriter {
+    /// AppKit's key-equivalent string for App Shortcuts (`NSUserKeyEquivalents`): `@` ⌘,
+    /// `~` ⌥, `^` ⌃, `$` ⇧, then the key's character ("@$k" is ⇧⌘K). nil for keys that have
+    /// no character AppKit menus accept, and for modifier-only combos.
+    public static func keyEquivalent(_ combo: KeyCombo) -> String? {
+        guard let code = combo.keyCode, let character = character(for: code) else { return nil }
+        var prefix = ""
+        if combo.modifiers.contains(.command) { prefix += "@" }
+        if combo.modifiers.contains(.option) { prefix += "~" }
+        if combo.modifiers.contains(.control) { prefix += "^" }
+        if combo.modifiers.contains(.shift) { prefix += "$" }
+        return prefix + character
+    }
+
+    /// The character a menu uses for a key: the US character, or AppKit's function-key ones.
+    static func character(for keyCode: Int) -> String? {
+        if let plain = KeyNames.ansi[keyCode], plain != "§" { return plain }
+        let named: [Int: Int] = [49: 0x20, 36: 0x0D, 76: 0x03, 48: 0x09, 53: 0x1B, 51: 0x08, 117: 0x7F,
+                                 126: 0xF700, 125: 0xF701, 123: 0xF702, 124: 0xF703,
+                                 115: 0xF729, 119: 0xF72B, 116: 0xF72C, 121: 0xF72D]
+        if let scalar = named[keyCode] ?? KeyNames.functionKeys.firstIndex(of: keyCode).map({ 0xF704 + $0 }),
+           let unicode = Unicode.Scalar(scalar) {
+            return String(Character(unicode))
+        }
+        return nil
+    }
+
+    /// The three numbers `com.apple.symbolichotkeys` stores for keys: the character (65535 for
+    /// keys without one), the key code, and AppKit modifier flags.
+    public static func symbolicParameters(_ combo: KeyCombo) -> [Int]? {
+        guard let code = combo.keyCode else { return nil }
+        var modifiers = combo.modifiers
+        // macOS stores F-keys, arrows and the navigation keys with fn whether or not it's held.
+        if KeyNames.impliesFunction(code) || [123, 124, 125, 126, 115, 119, 116, 121, 117].contains(code) {
+            modifiers.insert(.function)
+        }
+        let ascii = KeyNames.ansi[code].flatMap { $0.unicodeScalars.first?.value }.map(Int.init)
+            ?? (code == 49 ? 32 : 65535)
+        return [ascii, code, modifiers.cocoa]
+    }
+}

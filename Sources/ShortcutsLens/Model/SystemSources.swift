@@ -141,6 +141,21 @@ enum LiveHotKeys {
 
     static var isAvailable: Bool { functions != nil }
 
+    private typealias SetValue = @convention(c) (Int32, UInt16, UInt16, UInt32) -> Int32
+    nonisolated(unsafe) private static let setter: SetValue? = {
+        guard let handle = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_LAZY),
+              let set = dlsym(handle, "CGSSetSymbolicHotKeyValue") else { return nil }
+        return unsafeBitCast(set, to: SetValue.self)
+    }()
+
+    /// Hands new keys to the WindowServer, so a change works before the next login. Without it
+    /// (the interface gone) the settings file still takes over at login.
+    @discardableResult
+    static func set(id: Int, character: Int, keyCode: Int, modifiers: Int) -> Bool {
+        guard let setter else { return false }
+        return setter(Int32(id), UInt16(truncatingIfNeeded: character), UInt16(keyCode), UInt32(modifiers)) == 0
+    }
+
     static func values(for ids: [Int]) -> [Int: SymbolicHotKeys.Value] {
         guard let (get, isEnabled) = functions else { return [:] }
         var result: [Int: SymbolicHotKeys.Value] = [:]

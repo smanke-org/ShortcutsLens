@@ -109,8 +109,20 @@ enum Help {
 
         HelpTopic(id: "conflicts", title: "Conflicts", symbol: "exclamationmark.triangle", blocks: [
             .text("Two shortcuts conflict when both are on and use the same keys everywhere. Only one of them gets the keys, usually whichever app registered them first, so the other one silently does nothing."),
-            .text("The Conflicts page shows one card for each set of keys, with every shortcut that wants them. Each has a button that leads to where it's changed: Keyboard settings for macOS's own, the app itself for an app's. Click a shortcut for its details in the inspector. The Quick View has a Conflicts tab too."),
+            .text("The Conflicts page shows one card for each set of keys, with every shortcut that wants them. Click a shortcut to change it from the inspector (see Changing a Shortcut), or use the button that leads to where it's changed: Keyboard settings for macOS's own, the app itself for an app's. Click a shortcut for its details in the inspector. The Quick View has a Conflicts tab too."),
             .tip("Turned-off shortcuts and menu shortcuts that only work inside one app don't count as conflicts. Neither do two of one app's own shortcuts on the same keys used in different ways, such as holding a key and double-tapping it, when the app reports them."),
+        ]),
+
+        HelpTopic(id: "change", title: "Changing a Shortcut", symbol: "pencil", blocks: [
+            .text("Select a shortcut and click Change Shortcut… in the inspector. Choose the modifier buttons and type the key, as on Find a Free Shortcut. The sheet says right away what else uses the new keys; you can still save them with Change Anyway."),
+            .text("ShortcutsLens can change three kinds of shortcuts:"),
+            .keys([
+                ("macOS's own", "Saved where System Settings saves them; they work right away."),
+                ("App Shortcuts", "Menu shortcuts from System Settings › Keyboard › Keyboard Shortcuts › App Shortcuts. The app uses the new keys the next time it opens."),
+                ("Apps that accept changes", "Apps that report their shortcuts to ShortcutsLens and take new keys. The app saves them in its own settings, so its Settings window shows them too. It has to be running."),
+            ]),
+            .text("Other apps' shortcuts can't be changed here. Each app stores them its own way, and a running app would overwrite a change, so ShortcutsLens never writes their settings. Use Open in the inspector to go to the app instead."),
+            .tip("After a change, the inspector shows the keys it had before with an Undo button, which puts the original keys back even after several changes. Changes are remembered on this Mac only."),
         ]),
 
         HelpTopic(id: "keyboard", title: "Keyboard Map and Free Shortcuts", symbol: "keyboard.badge.ellipsis", blocks: [

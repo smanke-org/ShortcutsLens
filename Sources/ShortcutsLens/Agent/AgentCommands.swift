@@ -102,6 +102,22 @@ enum AgentCommands {
             run: { args in try await setHidden(args, hidden: false) }),
 
         AgentCommand(
+            name: "shortcuts change",
+            summary: "Gives a shortcut new keys, as Change Shortcut… does: macOS's own (works at once), App Shortcuts (used when the app next opens), and the user's apps that take changes. Other apps' shortcuts can't be changed. Says what else uses the new keys.",
+            params: [.init(name: "id", required: true, positional: true, help: "the shortcut's id from `shortcuts list`"),
+                     .init(name: "keys", required: true, positional: true,
+                           help: "the new keys: \"⌃⌥⌘K\", \"ctrl+opt+cmd+k\", or \"@$k\"")],
+            example: "shortcutslens shortcuts change 3f2a9c1e ctrl+opt+cmd+t --json",
+            run: { args in try await change(args) }),
+
+        AgentCommand(
+            name: "shortcuts undo",
+            summary: "Gives a shortcut back the keys it had before ShortcutsLens first changed it.",
+            params: [.init(name: "id", required: true, positional: true, help: "the shortcut's id")],
+            example: "shortcutslens shortcuts undo 3f2a9c1e --json",
+            run: { args in try await undoChange(args) }),
+
+        AgentCommand(
             name: "shortcuts rescan",
             summary: "Reads every source again (Keyboard settings, apps' settings, apps' reports) and waits for the result.",
             example: "shortcutslens shortcuts rescan --json",
@@ -259,6 +275,36 @@ enum AgentCommands {
                     "reported": mine.contains { $0.source == .appReport },
                     "conflicts": mine.filter { !store.partners(of: $0).isEmpty }.count]
         }
+    }
+
+    private static func change(_ args: Args) async throws -> JSONObject {
+        try await scanned()
+        let entry = try find(try args.required("id"))
+        let keys = try combo(try args.required("keys"))
+        let changer = ShortcutChanger.shared
+        guard changer.canChange(entry) else {
+            throw AgentError.usage(changer.reasonNotChangeable(entry) ?? "ShortcutsLens can't change this shortcut")
+        }
+        let others = store.uses(of: keys).filter { $0.id != entry.id && $0.enabled }
+        do { try await changer.change(entry, to: keys) } catch { throw AgentError.usage(error.localizedDescription) }
+        var result = summary(entry)
+        result["keys"] = keys.display
+        result["was"] = entry.combo.display
+        result["note"] = changer.explanation(for: entry)
+        result["alsoOnTheseKeys"] = others.map(brief)
+        return result
+    }
+
+    private static func undoChange(_ args: Args) async throws -> JSONObject {
+        try await scanned()
+        let entry = try find(try args.required("id"))
+        guard let record = ShortcutChanger.shared.records[entry.id] else {
+            throw AgentError.notFound("ShortcutsLens hasn't changed \(entry.title)")
+        }
+        do { try await ShortcutChanger.shared.undo(entry) } catch { throw AgentError.usage(error.localizedDescription) }
+        var result = summary(entry)
+        result["keys"] = record.old.display
+        return result
     }
 
     private static func setHidden(_ args: Args, hidden: Bool) async throws -> JSONObject {

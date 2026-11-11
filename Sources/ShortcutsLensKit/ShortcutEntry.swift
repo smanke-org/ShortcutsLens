@@ -64,10 +64,12 @@ public struct ShortcutEntry: Identifiable, Hashable, Sendable {
     /// How the keys are used, when an app's report says: "hold", "doubleTap" or "toggle".
     /// nil is an ordinary press.
     public var gesture: String?
+    /// The app said it can take a new shortcut for this one from ShortcutsLens.
+    public var changeable: Bool
 
     public init(id: String, ownerID: String, ownerName: String, title: String, category: String? = nil,
                 combo: KeyCombo, enabled: Bool = true, source: ShortcutSource, detail: String? = nil, menuPath: String? = nil,
-                gesture: String? = nil) {
+                gesture: String? = nil, changeable: Bool = false) {
         self.id = id
         self.ownerID = ownerID
         self.ownerName = ownerName
@@ -79,6 +81,7 @@ public struct ShortcutEntry: Identifiable, Hashable, Sendable {
         self.detail = detail
         self.menuPath = menuPath
         self.gesture = gesture
+        self.changeable = changeable
     }
 
     /// "Hold", "Double-tap", "Press to start and stop", or nil for a press.

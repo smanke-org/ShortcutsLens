@@ -33,6 +33,17 @@ enum DebugHooks {
             waitForScan { dump(to: file); QuitConfirmation.quitNow() }
             return true
         }
+        // `SHORTCUTSLENS_DEBUG_CHANGE=<entry id>=<keys>` changes that shortcut, traces what it
+        // reads back, then with `_UNDO` undoes it, and quits.
+        if let change = env["SHORTCUTSLENS_DEBUG_CHANGE"] {
+            waitForScan {
+                Task { @MainActor in
+                    await debugChange(change)
+                    QuitConfirmation.quitNow()
+                }
+            }
+            return true
+        }
         guard let show = env["SHORTCUTSLENS_DEBUG_SHOW"] else { return false }
         waitForScan {
             var window: NSWindow?
@@ -97,6 +108,32 @@ enum DebugHooks {
             }
         }
         return true
+    }
+
+    @MainActor
+    private static func debugChange(_ spec: String) async {
+        guard let split = spec.range(of: "=", options: .backwards) else { trace("bad CHANGE spec"); return }
+        let id = String(spec[..<split.lowerBound]), keys = String(spec[split.upperBound...])
+        // A report may still be on its way.
+        for _ in 0..<20 where !ShortcutStore.shared.all.contains(where: { $0.id == id }) { try? await Task.sleep(for: .milliseconds(250)) }
+        guard let entry = ShortcutStore.shared.all.first(where: { $0.id == id }),
+              let combo = KeyEquivalentParser.parseReadable(keys) ?? KeyEquivalentParser.parseKeyEquivalent(keys) else {
+            trace("no entry \(id) or bad keys \(keys)"); return
+        }
+        trace("before \(entry.combo.display) changeable=\(ShortcutChanger.shared.canChange(entry))")
+        do {
+            try await ShortcutChanger.shared.change(entry, to: combo)
+            trace("changed to \(combo.display)")
+            try? await Task.sleep(for: .seconds(2))
+            trace("rescanned: \(ShortcutStore.shared.all.first { $0.id == id }?.combo.display ?? "gone")")
+            if env["SHORTCUTSLENS_DEBUG_UNDO"] != nil, let now = ShortcutStore.shared.all.first(where: { $0.id == id }) {
+                try await ShortcutChanger.shared.undo(now)
+                try? await Task.sleep(for: .seconds(2))
+                trace("undone: \(ShortcutStore.shared.all.first { $0.id == id }?.combo.display ?? "gone")")
+            }
+        } catch {
+            trace("failed: \(error.localizedDescription)")
+        }
     }
 
     @MainActor

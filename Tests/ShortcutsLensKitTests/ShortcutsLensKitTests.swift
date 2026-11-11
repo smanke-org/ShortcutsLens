@@ -314,3 +314,25 @@ import Testing
         }
     }
 }
+
+@Suite struct KeyWriterTests {
+    @Test func keyEquivalentsRoundTrip() throws {
+        for text in ["@$k", "@~^j", "^~@\u{F702}", "@\u{F704}", "~ "] {
+            let combo = try #require(KeyEquivalentParser.parseKeyEquivalent(text), "\(text)")
+            let written = try #require(KeyWriter.keyEquivalent(combo))
+            #expect(KeyEquivalentParser.parseKeyEquivalent(written) == combo, "\(text) -> \(written)")
+        }
+    }
+
+    @Test func symbolicParametersMatchApple() throws {
+        // Turn image smoothing on or off, as Keyboard settings' table stores it: \ key, ⌥⌘.
+        let smoothing = KeyCombo(keyCode: 42, modifiers: [.option, .command])
+        #expect(KeyWriter.symbolicParameters(smoothing) == [92, 42, 1_572_864])
+        // Move left a Space: ⌃← with the fn flag macOS keeps on arrows.
+        let left = KeyCombo(keyCode: 123, modifiers: [.control])
+        #expect(KeyWriter.symbolicParameters(left) == [65535, 123, 8_650_752])
+        // F-keys carry fn too.
+        #expect(KeyWriter.symbolicParameters(KeyCombo(keyCode: 122, modifiers: []))?[2] == 8_388_608)
+        #expect(KeyWriter.symbolicParameters(KeyCombo(keyCode: nil, modifiers: [.command])) == nil)
+    }
+}

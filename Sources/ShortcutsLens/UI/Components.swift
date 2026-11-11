@@ -55,6 +55,8 @@ struct KeyLabel: View {
             .tracking(1)
             .lineLimit(1)
             .fixedSize()
+            // A fixed text color: a selected row turns .primary white, and the cap stays light.
+            .foregroundStyle(Color(nsColor: .textColor))
             .padding(.horizontal, 7)
             .padding(.vertical, 2)
             .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color(nsColor: .controlBackgroundColor)))
@@ -210,6 +212,7 @@ struct ShortcutInspector: View {
 
     @ViewBuilder private var actions: some View {
         VStack(alignment: .leading, spacing: 8) {
+            ChangeControls(entry: entry)
             if let action = Actions.changeAction(for: entry) {
                 Button(action.title, action: action.run)
             }

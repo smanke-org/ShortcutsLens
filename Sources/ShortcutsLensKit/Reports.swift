@@ -9,12 +9,20 @@ import Foundation
 public enum ShortcutReports {
     public static let request = "com.smanke.ShortcutsLens.request"
     public static let report = "com.smanke.ShortcutsLens.report"
+    /// ShortcutsLens asks an app to use new keys: object is the app's bundle id; userInfo has
+    /// `id`, `keyCode`, `carbonModifiers` and `requestID`.
+    public static let change = "com.smanke.ShortcutsLens.change"
+    /// The app's answer: object is its bundle id; userInfo has `requestID`, `ok` and, when it
+    /// couldn't, `message`.
+    public static let changed = "com.smanke.ShortcutsLens.changed"
 
     /// Turns a report's userInfo into entries. `sender` is the notification's object, the
     /// app's bundle id.
     public static func entries(sender: String, userInfo: [AnyHashable: Any]) -> [ShortcutEntry]? {
         guard let list = userInfo["shortcuts"] as? [[String: Any]] else { return nil }
         let appName = userInfo["app"] as? String ?? sender
+        // Set by apps whose copy of ShortcutsLensReport.swift takes changes.
+        let canChange = userInfo["canChange"] as? Bool ?? false
         return list.compactMap { item in
             guard let id = item["id"] as? String, let title = item["title"] as? String else { return nil }
             let keyCode = item["keyCode"] as? Int
@@ -27,7 +35,7 @@ public enum ShortcutReports {
                                  category: item["category"] as? String, combo: KeyCombo(keyCode: keyCode, modifiers: modifiers),
                                  enabled: item["enabled"] as? Bool ?? true, source: .appReport,
                                  detail: "\(appName) reported this shortcut itself. Change it in \(appName)'s settings.",
-                                 gesture: gesture)
+                                 gesture: gesture, changeable: canChange)
         }
     }
 }

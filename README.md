@@ -20,6 +20,7 @@ Requires macOS 26 or later. ShortcutsLens is in beta.
 
 - **Every system-wide shortcut, by app.** macOS's own (named and grouped as in Keyboard settings, with the values macOS is actually using), fixed ones like Force Quit and the 🌐 key's, Services, App Shortcuts, the global shortcuts apps save in their settings, and the documented defaults of popular apps that never save theirs.
 - **Conflicts.** Shortcuts that are on and share the same keys, grouped by keys, with where to change each one.
+- **Change a shortcut right there.** Give macOS's own shortcuts, App Shortcuts, and shortcuts from apps that support it new keys from the inspector, with a conflict check before you save and Undo afterward.
 - **Keyboard Map.** Your keyboard for any mix of modifiers: taken keys lit, conflicts in orange, free keys plain. Click a key to see everything on it.
 - **Find a Free Shortcut.** Choose the modifier keys and type the key of a shortcut you have in mind to see which app, if any, uses it, or pick from free ones in the modifier sets least likely to clash with app menus. Click to copy.
 - **The app in front.** With Accessibility, the menu shortcuts of the app you were using, with where each sits in its menus.
@@ -47,10 +48,10 @@ macOS keeps no single list of every shortcut, and it doesn't tell one app which 
 
 - **macOS's shortcuts** come from the table Keyboard settings is built from, merged with your changes (`com.apple.symbolichotkeys`) and the live values the window server is using.
 - **Apps' shortcuts** come from their settings files. Most apps save global shortcuts with one of a few common libraries, and each leaves a recognizable shape (a JSON string of key code and modifiers, an archived shortcut object, a key-code dictionary). ShortcutsLens only looks under settings whose names say "hotkey" or "shortcut", so window positions and typed keys aren't mistaken for shortcuts.
-- **Apps that report their own shortcuts** answer ShortcutsLens directly while they run, which is exact. The protocol is one small file, [`Shared/ShortcutsLensReport.swift`](Shared/ShortcutsLensReport.swift), that any app can copy in.
+- **Apps that report their own shortcuts** answer ShortcutsLens directly while they run, which is exact. The protocol is one small file, [`Shared/ShortcutsLensReport.swift`](Shared/ShortcutsLensReport.swift), that any app can copy in. An app that passes a `change` handler to it also lets people give its shortcuts new keys from ShortcutsLens.
 - **App Store apps** keep their settings in a sandbox. Turn on "Also look in sandboxed apps" in Settings › Sources to include them; macOS asks once whether ShortcutsLens may see other apps' data.
 
-An app that keeps its shortcuts in its own database, or hard-codes them, leaves nothing to read, so a shortcut ShortcutsLens calls free is a very good sign rather than a guarantee. ShortcutsLens reads only; it never changes another app's settings, and it never asks for Full Disk Access.
+An app that keeps its shortcuts in its own database, or hard-codes them, leaves nothing to read, so a shortcut ShortcutsLens calls free is a very good sign rather than a guarantee. ShortcutsLens never writes another app's settings file: it changes macOS's shortcuts and App Shortcuts where System Settings keeps them, and other apps' shortcuts only by asking the app, which saves the change itself. It never asks for Full Disk Access.
 
 ## Updates
 
