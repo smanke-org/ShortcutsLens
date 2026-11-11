@@ -38,7 +38,11 @@ Requires macOS 26 or later. ShortcutsLens is in beta.
 </tr>
 <tr>
 <td width="50%"><img src="docs/images/conflicts.png" alt="The Conflicts page, showing SnagAnything and TextLens both on Control-Option-Command-2"><br><sub><b>Conflicts.</b> Shortcuts that fight over the same keys.</sub></td>
-<td width="50%"><img src="docs/images/free.png" alt="Find a Free Shortcut, with a box to test a shortcut and free shortcuts grouped by modifiers"><br><sub><b>Find a Free Shortcut.</b> Test one, or pick one that's free.</sub></td>
+<td width="50%"><img src="docs/images/free.png" alt="Find a Free Shortcut with Control, Option and Command chosen and 2 typed, showing that SnagAnything and TextLens both use it, above free shortcuts grouped by modifiers"><br><sub><b>Find a Free Shortcut.</b> Check one, or pick one that's free.</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/images/change.png" alt="The Change sheet for macOS's Show Desktop shortcut, with Control-Option-Command-D chosen and a warning that TextLens already uses it"><br><sub><b>Change Shortcut.</b> New keys, checked for conflicts before you save.</sub></td>
+<td width="50%"></td>
 </tr>
 </table>
 
@@ -49,6 +53,7 @@ macOS keeps no single list of every shortcut, and it doesn't tell one app which 
 - **macOS's shortcuts** come from the table Keyboard settings is built from, merged with your changes (`com.apple.symbolichotkeys`) and the live values the window server is using.
 - **Apps' shortcuts** come from their settings files. Most apps save global shortcuts with one of a few common libraries, and each leaves a recognizable shape (a JSON string of key code and modifiers, an archived shortcut object, a key-code dictionary). ShortcutsLens only looks under settings whose names say "hotkey" or "shortcut", so window positions and typed keys aren't mistaken for shortcuts.
 - **Apps that report their own shortcuts** answer ShortcutsLens directly while they run, which is exact. The protocol is one small file, [`Shared/ShortcutsLensReport.swift`](Shared/ShortcutsLensReport.swift), that any app can copy in. An app that passes a `change` handler to it also lets people give its shortcuts new keys from ShortcutsLens.
+- **Popular apps that never save their defaults** (Snagit, 1Password, Clop and a few more) are covered by a short list of their documented default shortcuts, used only when nothing is found in the app's settings.
 - **App Store apps** keep their settings in a sandbox. Turn on "Also look in sandboxed apps" in Settings › Sources to include them; macOS asks once whether ShortcutsLens may see other apps' data.
 
 An app that keeps its shortcuts in its own database, or hard-codes them, leaves nothing to read, so a shortcut ShortcutsLens calls free is a very good sign rather than a guarantee. ShortcutsLens never writes another app's settings file: it changes macOS's shortcuts and App Shortcuts where System Settings keeps them, and other apps' shortcuts only by asking the app, which saves the change itself. It never asks for Full Disk Access.

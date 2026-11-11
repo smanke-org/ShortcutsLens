@@ -1,3 +1,4 @@
+import AppKit
 import ShortcutsLensKit
 import SwiftUI
 
@@ -95,6 +96,10 @@ struct ChangeShortcutSheet: View {
         self.entry = entry
         _modifiers = State(initialValue: entry.combo.modifiers)
         _key = State(initialValue: entry.combo.keyCode.map(KeyNames.name(for:)) ?? "")
+        #if DEBUG
+        // `SHORTCUTSLENS_DEBUG_SHEET_KEYS=⌃⌥⌘D` types new keys into the sheet for screenshots.
+        if let keys = ProcessInfo.processInfo.environment["SHORTCUTSLENS_DEBUG_SHEET_KEYS"] { _key = State(initialValue: keys) }
+        #endif
     }
 
     private var unchanged: Bool { combo == entry.combo }
@@ -148,6 +153,17 @@ struct ChangeShortcutSheet: View {
         }
         .padding(20)
         .frame(width: 680)
+        #if DEBUG
+        // Screenshots: a sheet shown before the app is active never becomes key by itself.
+        .onAppear {
+            guard ProcessInfo.processInfo.environment["SHORTCUTSLENS_DEBUG_CHANGE_SHEET"] != nil else { return }
+            for delay in [2.0, 3.0, 4.0, 5.0] {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                    NSApp.windows.filter(\.isSheet).forEach { $0.makeKeyAndOrderFront(nil) }
+                }
+            }
+        }
+        #endif
     }
 
     private func save() {
