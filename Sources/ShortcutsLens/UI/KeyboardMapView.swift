@@ -198,7 +198,7 @@ struct FreeShortcutsView: View {
             SwiftUI.Group {
                 if let check = state.freeCheck {
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        ComboUsage(combo: check)
+                        ComboUsage(combo: check, offersChanges: true)
                         Button("Copy") { copy(check) }.controlSize(.small)
                     }
                 } else if ComboPicker.unreadable(state.checkKey, combo: state.freeCheck) {

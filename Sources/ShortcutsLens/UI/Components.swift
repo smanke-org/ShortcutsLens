@@ -378,23 +378,98 @@ struct ShortcutRecorder: NSViewRepresentable {
     }
 }
 
-/// A sentence about who uses a combo, for the recorder in Free Shortcuts and Settings.
+/// A sentence about who uses a combo, for the recorder in Free Shortcuts and Settings. With
+/// `offersChanges`, each user gets a button to move it to other keys (Change…) or to the place
+/// it's changed (Open), and what was moved off these keys can be put back.
 struct ComboUsage: View {
     let combo: KeyCombo
     var ignoring: String? = nil
+    var offersChanges = false
     @State private var store = ShortcutStore.shared
+    @State private var changer = ShortcutChanger.shared
+    @State private var editing: ShortcutEntry?
+    @State private var failure: String?
 
     var body: some View {
         let uses = store.uses(of: combo).filter { $0.id != ignoring && $0.enabled }
-        if uses.isEmpty {
-            Label("\(combo.display) is free: nothing ShortcutsLens can see uses it.", systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-        } else {
-            VStack(alignment: .leading, spacing: 3) {
-                Label("\(combo.display) is taken", systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-                ForEach(uses) { use in
-                    Text("\(use.ownerName): \(use.title)\(use.isGlobal ? "" : " (only in \(use.ownerName))")")
-                        .font(.callout).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 6) {
+            if uses.isEmpty {
+                Label("\(combo.display) is free: nothing ShortcutsLens can see uses it.", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            } else {
+                VStack(alignment: .leading, spacing: offersChanges ? 6 : 3) {
+                    Label("\(combo.display) is taken", systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                    ForEach(uses) { use in
+                        let name = Text("\(use.ownerName): \(use.title)\(use.isGlobal ? "" : " (only in \(use.ownerName))")")
+                            .font(.callout).foregroundStyle(.secondary)
+                        if offersChanges {
+                            // Side by side when there's room (the Check box), stacked in the inspector.
+                            ViewThatFits(in: .horizontal) {
+                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                    name.fixedSize()
+                                    changeButton(for: use)
+                                }
+                                VStack(alignment: .leading, spacing: 4) {
+                                    name.fixedSize(horizontal: false, vertical: true)
+                                    changeButton(for: use)
+                                }
+                            }
+                        } else {
+                            name
+                        }
+                    }
+                    if offersChanges, uses.contains(where: { !changer.canChange($0) }) {
+                        Text("Open takes you to an app that keeps its shortcuts its own way, so you can change it there.")
+                            .font(.caption).foregroundStyle(.tertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            if offersChanges { moved }
+            if let failure {
+                Text(failure).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .sheet(item: $editing) { ChangeShortcutSheet(entry: $0) }
+        #if DEBUG
+        // `SHORTCUTSLENS_DEBUG_USAGE_CHANGE=1` presses the first Change… for tests.
+        .onAppear {
+            guard offersChanges, ProcessInfo.processInfo.environment["SHORTCUTSLENS_DEBUG_USAGE_CHANGE"] != nil else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                editing = store.uses(of: combo).first { $0.id != ignoring && $0.enabled && changer.canChange($0) }
+            }
+        }
+        #endif
+    }
+
+    @ViewBuilder
+    private func changeButton(for use: ShortcutEntry) -> some View {
+        if changer.canChange(use) {
+            Button("Change…") { editing = use }
+                .controlSize(.small)
+                .help("Give “\(use.title)” other keys, to free \(combo.display)")
+        } else if let action = Actions.changeAction(for: use) {
+            Button(action.title.hasPrefix("Open Keyboard") ? "Open Settings…" : "Open", action: action.run)
+                .controlSize(.small)
+                .help(action.title)
+        }
+    }
+
+    /// Shortcuts ShortcutsLens moved off these keys, with Undo.
+    @ViewBuilder
+    private var moved: some View {
+        let records = changer.records.values.filter { $0.old == combo }.sorted { $0.date > $1.date }
+        ForEach(records, id: \.entryID) { record in
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("Moved \(record.ownerName): \(record.title) to").font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Keycaps(combo: record.new, size: .small)
+                if let entry = store.all.first(where: { $0.id == record.entryID }) {
+                    Button("Undo") {
+                        Task { do { failure = nil; try await changer.undo(entry) } catch { failure = error.localizedDescription } }
+                    }
+                    .controlSize(.small)
+                    .help("Gives it back \(combo.display)")
                 }
             }
         }

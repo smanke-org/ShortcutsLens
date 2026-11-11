@@ -592,7 +592,7 @@ struct FreeInspector: View {
             VStack(alignment: .leading, spacing: 14) {
                 Keycaps(combo: combo, size: .large)
                 Text(combo.spoken).foregroundStyle(.secondary).textSelection(.enabled)
-                ComboUsage(combo: combo)
+                ComboUsage(combo: combo, offersChanges: true)
                 Button("Copy") { Actions.copy(combo.display) }
             }
             .padding(16)

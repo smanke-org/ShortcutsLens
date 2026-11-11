@@ -22,7 +22,7 @@ Requires macOS 26 or later. ShortcutsLens is in beta.
 - **Conflicts.** Shortcuts that are on and share the same keys, grouped by keys, with where to change each one.
 - **Change a shortcut right there.** Give macOS's own shortcuts, App Shortcuts, and shortcuts from apps that support it new keys from the inspector, with a conflict check before you save and Undo afterward.
 - **Keyboard Map.** Your keyboard for any mix of modifiers: taken keys lit, conflicts in orange, free keys plain. Click a key to see everything on it.
-- **Find a Free Shortcut.** Choose the modifier keys and type the key of a shortcut you have in mind to see which app, if any, uses it, or pick from free ones in the modifier sets least likely to clash with app menus. Click to copy.
+- **Find a Free Shortcut.** Choose the modifier keys and type the key of a shortcut you have in mind to see which app, if any, uses it (and move that shortcut to other keys with Change…), or pick from free ones in the modifier sets least likely to clash with app menus. Click to copy.
 - **The app in front.** With Accessibility, the menu shortcuts of the app you were using, with where each sits in its menus.
 - **Quick View.** ⌃⌥⌘/ (change it in Settings) floats a cheat sheet over any app: its menu shortcuts, every system-wide shortcut and the conflicts, searchable. Optionally hold ⌘ for a second to peek at it.
 - **Search by name or keys.** Type ⌘⇧4 or ⇧⌘4, either finds it.

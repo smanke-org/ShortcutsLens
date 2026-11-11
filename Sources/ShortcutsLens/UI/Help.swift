@@ -114,7 +114,7 @@ enum Help {
         ]),
 
         HelpTopic(id: "change", title: "Changing a Shortcut", symbol: "pencil", blocks: [
-            .text("Select a shortcut and click Change Shortcut… in the inspector. Choose the modifier buttons and type the key, as on Find a Free Shortcut. The sheet says right away what else uses the new keys; you can still save them with Change Anyway."),
+            .text("Select a shortcut and click Change Shortcut… in the inspector, or click Change… beside it when Find a Free Shortcut says its keys are taken. Choose the modifier buttons and type the key, as on Find a Free Shortcut. The sheet says right away what else uses the new keys; you can still save them with Change Anyway."),
             .text("ShortcutsLens can change three kinds of shortcuts:"),
             .keys([
                 ("macOS's own", "Saved where System Settings saves them; they work right away."),
@@ -129,7 +129,7 @@ enum Help {
             .text("The Keyboard Map draws your keyboard, as wide as the window, for the modifiers you choose at the top. Keys with a system-wide shortcut are lit, conflicts are orange, and free keys are plain; a number in a key's corner says how many shortcuts it holds. Hover over a key to see what uses it, or click it to list everything on that key, with any modifiers, in the inspector."),
             .text("Turn on \"Include … menus\" to light the menu shortcuts of the app you were using as well."),
             .heading("Find a Free Shortcut"),
-            .text("To check a shortcut you have in mind, click its modifier buttons at the top (⌃ Control, ⌥ Option, ⇧ Shift, ⌘ Command, fn) and type the key in the Key box: a letter, number or symbol, or a name like F5, Space, Return or Left (the keyboard menu lists them). You can also paste a whole shortcut such as ⌃⇧C or ctrl+shift+c. ShortcutsLens says right away whether anything uses it and which app, and the inspector shows the details. You choose the keys rather than pressing them because a shortcut another app holds never reaches ShortcutsLens when you press it. Below are free shortcuts for the modifier sets least likely to collide with app menus. Click one to copy it; it says Copied for a moment."),
+            .text("To check a shortcut you have in mind, click its modifier buttons at the top (⌃ Control, ⌥ Option, ⇧ Shift, ⌘ Command, fn) and type the key in the Key box: a letter, number or symbol, or a name like F5, Space, Return or Left (the keyboard menu lists them). You can also paste a whole shortcut such as ⌃⇧C or ctrl+shift+c. ShortcutsLens says right away whether anything uses it and which app, and the inspector shows the details. To free keys that are taken, click Change… beside the shortcut that has them and give it other keys (see Changing a Shortcut); an app that keeps its shortcuts its own way gets Open instead, which takes you there. Whatever ShortcutsLens moved off the keys is listed with Undo. You choose the keys rather than pressing them because a shortcut another app holds never reaches ShortcutsLens when you press it. Below are free shortcuts for the modifier sets least likely to collide with app menus. Click one to copy it; it says Copied for a moment."),
             .tip("Shortcuts with three or four modifiers, such as ⌃⌥⌘, almost never appear in app menus, which makes them good choices for global shortcuts."),
         ]),
 
