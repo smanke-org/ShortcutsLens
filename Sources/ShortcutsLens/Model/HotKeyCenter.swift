@@ -49,6 +49,9 @@ final class HotKeyCenter {
     /// While a shortcut is being recorded, the current one must not fire.
     func pause() { paused = true; apply() }
     func resume() { paused = false; apply() }
+    #if DEBUG
+    var debugPaused: Bool { paused }
+    #endif
 
     private func installHandlerOnce() {
         guard !installed else { return }

@@ -44,6 +44,13 @@ enum DebugHooks {
             }
             return true
         }
+        // `SHORTCUTSLENS_DEBUG_EDITOR=<folder>` opens the Quick View shortcut's editor in Settings,
+        // runs it through typed keys, pressed keys, Set, Clear and Esc, draws each step to
+        // <folder>/editor-<step>.png, writes <folder>/editor.txt, and quits.
+        if let folder = env["SHORTCUTSLENS_DEBUG_EDITOR"] {
+            waitForScan { Task { @MainActor in await editorTest(folder); QuitConfirmation.quitNow() } }
+            return true
+        }
         guard let show = env["SHORTCUTSLENS_DEBUG_SHOW"] else { return false }
         waitForScan {
             var window: NSWindow?
@@ -134,6 +141,147 @@ enum DebugHooks {
         } catch {
             trace("failed: \(error.localizedDescription)")
         }
+    }
+
+    @MainActor
+    private static func editorTest(_ folder: String) async {
+        var lines: [String] = []
+        func check(_ name: String, _ ok: Bool, _ detail: String = "") { lines.append("\(ok ? "PASS" : "FAIL") \(name) \(detail)") }
+        func pause() async { try? await Task.sleep(for: .milliseconds(400)) }
+        func draw(_ button: ShortcutRecorder.RecorderButton, _ step: String) {
+            guard let view = button.debugPopoverView, let frame = view.window?.contentView?.superview ?? view.window?.contentView,
+                  let rep = frame.bitmapImageRepForCachingDisplay(in: frame.bounds) else { lines.append("no popover for \(step)"); return }
+            frame.cacheDisplay(in: frame.bounds, to: rep)
+            try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: "\(folder)/editor-\(step).png"))
+        }
+        func key(_ code: Int, _ flags: NSEvent.ModifierFlags) -> NSEvent {
+            NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: flags, timestamp: 0, windowNumber: 0, context: nil,
+                             characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: UInt16(code))!
+        }
+        let prefs = Preferences.shared
+        let start = prefs.quickViewHotKey
+        lines.append("start \(start?.display ?? "none")")
+        SettingsWindow.shared.show(.quickView)
+        await pause()
+        func find(_ view: NSView?) -> ShortcutRecorder.RecorderButton? {
+            guard let view else { return nil }
+            if let button = view as? ShortcutRecorder.RecorderButton { return button }
+            for sub in view.subviews { if let found = find(sub) { return found } }
+            return nil
+        }
+        guard let button = find(SettingsWindow.shared.debugWindow?.contentView) else {
+            lines.append("FAIL no recorder button")
+            try? lines.joined(separator: "\n").write(toFile: "\(folder)/editor.txt", atomically: true, encoding: .utf8)
+            return
+        }
+        button.open()
+        await pause()
+        guard let model = button.debugModel else { lines.append("FAIL no editor"); return }
+        check("opens with the current keys", model.combo == start, model.combo?.display ?? "nil")
+        check("hotkey paused while open", HotKeyCenter.shared.debugPaused)
+        check("button says Set a shortcut…", button.debugTitle == "Set a shortcut…", button.debugTitle)
+        draw(button, "1-open")
+
+        // "+" is ⇧ and the = key.
+        model.modifiers = [.control, .option]
+        model.key = "+"
+        await pause()
+        check("+ becomes ⇧=", model.combo == KeyCombo(keyCode: 24, modifiers: [.control, .option, .shift]) && model.key == "=",
+              "\(model.combo?.display ?? "nil") key \(model.key)")
+        draw(button, "2-plus")
+
+        // A letter typed after a key replaces it.
+        model.key = "=a"
+        await pause()
+        check("typed letter replaces the key", model.key == "A" || model.key == "a", model.key)
+        model.key = "K"
+        await pause()
+        model.key = "K="
+        await pause()
+        check("typed = replaces K", model.key == "=" && model.combo?.keyCode == 24, "\(model.key) \(model.combo?.display ?? "nil")")
+        model.key = "=k"
+        await pause()
+        check("typed k replaces =", model.combo?.keyCode == 40, "\(model.key) \(model.combo?.display ?? "nil")")
+
+        // A bare letter (⇧ only) is refused.
+        model.modifiers = [.shift]
+        model.key = "K"
+        await pause()
+        check("bare letter refused", !model.canSet && model.problem != nil, model.problem ?? "no problem")
+        draw(button, "3-bare")
+
+        // F5 alone is fine.
+        model.modifiers = []
+        model.key = "F5"
+        await pause()
+        check("F-key alone allowed", model.canSet && model.combo == KeyCombo(keyCode: 96, modifiers: []), model.combo?.display ?? "nil")
+        draw(button, "4-fkey")
+
+        // Every key in the keyboard menu comes back as itself, with a printable name.
+        var wrong: [String] = []
+        for code in ComboPicker.specialKeys + KeyNames.functionKeys {
+            let name = ComboPicker.specialKeys.contains(code) ? KeyNames.spokenName(for: code) : KeyNames.name(for: code)
+            model.modifiers = [.control, .option]
+            model.key = name
+            await pause()
+            let glyph = KeyNames.name(for: code)
+            if model.combo?.keyCode != code || model.key != name || glyph.unicodeScalars.contains(where: { $0.value < 32 || $0.value == 127 }) {
+                wrong.append("\(code) \(name) -> \(model.key) \(model.combo?.display ?? "nil")")
+            }
+        }
+        check("menu keys keep their names", wrong.isEmpty, wrong.joined(separator: "; "))
+        lines.append("menu glyphs: " + (ComboPicker.specialKeys + KeyNames.functionKeys).map { KeyNames.name(for: $0) }.joined(separator: " "))
+
+        // Pressing a shortcut fills everything in.
+        let used = model.handle(key(40, [.control, .option, .command]))
+        await pause()
+        check("pressed ⌃⌥⌘K fills in", used && model.combo == KeyCombo(keyCode: 40, modifiers: [.control, .option, .command]),
+              model.combo?.display ?? "nil")
+        draw(button, "5-pressed")
+        let plain = model.handle(key(0, []))
+        check("plain letter goes to the key box", !plain)
+        let fkey = model.handle(key(97, []))
+        await pause()
+        check("pressed F6 alone fills in", fkey && model.combo == KeyCombo(keyCode: 97, modifiers: []), model.combo?.display ?? "nil")
+
+        // Return sets it.
+        _ = model.handle(key(36, []))
+        await pause()
+        check("Return sets F6", prefs.quickViewHotKey == KeyCombo(keyCode: 97, modifiers: []), prefs.quickViewHotKey?.display ?? "nil")
+        check("popover closed, hotkey resumed", button.debugModel == nil && !HotKeyCenter.shared.debugPaused)
+        check("F6 registered", !HotKeyCenter.shared.registrationFailed)
+        check("button shows F6", button.debugTitle == "F6", button.debugTitle)
+
+        // Esc cancels.
+        button.open()
+        await pause()
+        button.debugModel?.press(40, [.control, .shift])
+        await pause()
+        check("⌃⇧K allowed", button.debugModel?.canSet == true)
+        _ = button.debugModel?.handle(key(53, []))
+        await pause()
+        lines.append("after Esc: model \(button.debugModel == nil ? "gone" : "still there"), popover shown \(button.debugPopoverView?.window?.isVisible ?? false)")
+        try? await Task.sleep(for: .seconds(1))
+        check("Esc cancels", prefs.quickViewHotKey == KeyCombo(keyCode: 97, modifiers: []) && button.debugModel == nil,
+              prefs.quickViewHotKey?.display ?? "nil")
+
+        // Clear turns it off.
+        button.open()
+        await pause()
+        draw(button, "6-before-clear")
+        button.debugModel?.finish?(.set(nil))
+        await pause()
+        check("Clear turns it off", prefs.quickViewHotKey == nil && button.debugTitle == "Click to set", button.debugTitle)
+        button.open()
+        await pause()
+        check("Clear is off with no shortcut", button.debugModel?.original == nil)
+        draw(button, "7-empty")
+        button.debugModel?.finish?(.cancel)
+        await pause()
+
+        prefs.quickViewHotKey = start
+        lines.append("restored \(prefs.quickViewHotKey?.display ?? "none")")
+        try? lines.joined(separator: "\n").write(toFile: "\(folder)/editor.txt", atomically: true, encoding: .utf8)
     }
 
     @MainActor

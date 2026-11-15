@@ -216,7 +216,7 @@ struct QuickViewSettings: View {
     var body: some View {
         Form {
             Section {
-                LabeledContent("Quick View shortcut") { ShortcutRecorder(combo: $prefs.quickViewHotKey) }
+                LabeledContent("Quick View shortcut") { ShortcutRecorder(combo: $prefs.quickViewHotKey, ownID: "own|quickview") }
                 if hotkeys.registrationFailed, let key = prefs.quickViewHotKey {
                     Text("Another app is already using \(key.display). Pick another shortcut.").font(.caption).foregroundStyle(.red)
                 } else if let key = prefs.quickViewHotKey {
@@ -234,7 +234,7 @@ struct QuickViewSettings: View {
                     ForEach(Preferences.StartPage.allCases) { Text($0.title).tag($0) }
                 }
             } footer: {
-                Text("The shortcut opens the Quick View for searching; press it again or Esc to close it. Holding ⌘ by itself for a second shows it until you let go. Click the shortcut above, then press new keys; Delete clears it.")
+                Text("The shortcut opens the Quick View for searching; press it again or Esc to close it. Holding ⌘ by itself for a second shows it until you let go. Click the shortcut to change it: pick ⌃ ⌥ ⇧ ⌘ and type a key, or just press the new shortcut. It needs ⌃, ⌥ or ⌘ unless it's an F-key. Clear turns it off.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }

@@ -9,12 +9,15 @@ struct ComboPicker: View {
     @Binding var key: String
     /// The keys chosen, or nil while the key box is empty or unreadable.
     @Binding var combo: KeyCombo?
+    /// The modifier buttons shown. ShortcutsLens's own shortcut leaves out fn, which a
+    /// shortcut registered with macOS can't use.
+    var choices: [Modifiers] = Modifiers.ordered
 
     static let specialKeys = [49, 36, 48, 53, 51, 117, 123, 124, 126, 125, 115, 119, 116, 121]
 
     var body: some View {
         HStack(spacing: 6) {
-            ForEach(Modifiers.ordered, id: \.rawValue) { mod in
+            ForEach(choices, id: \.rawValue) { mod in
                 Toggle(isOn: Binding(get: { modifiers.contains(mod) },
                                      set: { on in
                                          if on { modifiers.insert(mod) } else { modifiers.remove(mod) }
@@ -37,7 +40,7 @@ struct ComboPicker: View {
                 .multilineTextAlignment(.center)
                 .frame(width: 90)
                 .onSubmit(update)
-                .onChange(of: key) { update() }
+                .onChange(of: key) { old, new in typed(old: old, new: new) }
                 .accessibilityLabel("Key")
                 .help("A letter, number or symbol, or a key name like F5, Space, Return, Tab, Esc, Delete or Left")
             Menu {
@@ -47,6 +50,11 @@ struct ComboPicker: View {
                 Divider()
                 ForEach(Array(KeyNames.functionKeys.prefix(12)), id: \.self) { code in
                     Button(KeyNames.name(for: code)) { key = KeyNames.name(for: code) }
+                }
+                Menu("More F-keys") {
+                    ForEach(Array(KeyNames.functionKeys.dropFirst(12)), id: \.self) { code in
+                        Button(KeyNames.name(for: code)) { key = KeyNames.name(for: code) }
+                    }
                 }
             } label: {
                 Image(systemName: "keyboard")
@@ -65,6 +73,29 @@ struct ComboPicker: View {
         !key.trimmingCharacters(in: .whitespaces).isEmpty && combo == nil
     }
 
+    /// Key names people type in full, so "Sp" on the way to "Space" isn't cut short.
+    private static let typedNames: [String] = {
+        var names = KeyNames.special.values.map { $0.name.lowercased() }
+        names += ["space", "return", "enter", "esc", "escape", "tab", "delete", "backspace", "left", "right", "up", "down",
+                  "forward delete", "del", "home", "end", "page up", "pageup", "page down", "pagedown"]
+        names += KeyNames.functionKeys.map { KeyNames.name(for: $0).lowercased() }
+        return names
+    }()
+
+    /// The key box changed. A character typed after a key replaces it ("/" then "a" is "a"),
+    /// unless it's on the way to a key name or a whole pasted shortcut.
+    private func typed(old: String, new: String) {
+        let text = new.trimmingCharacters(in: .whitespaces)
+        if text.count > 1, KeyEquivalentParser.keyCode(named: text) == nil, KeyEquivalentParser.parseReadable(text) == nil,
+           !Self.typedNames.contains(where: { $0.hasPrefix(text.lowercased()) }),
+           let last = new.last, !last.isWhitespace,
+           KeyEquivalentParser.keyCode(named: String(last)) != nil || KeyboardLayout.shiftedKeyCode(for: String(last)) != nil {
+            key = String(last)
+            return  // runs again with the one character
+        }
+        update()
+    }
+
     /// Reads the key box. A pasted whole shortcut ("⌃⇧C", "ctrl+shift+c") sets the buttons too.
     private func update() {
         let typed = key.trimmingCharacters(in: .whitespaces)
@@ -72,6 +103,12 @@ struct ComboPicker: View {
             modifiers = whole.modifiers
             key = KeyNames.name(for: code)
             return  // the key box's change runs this again with just the key
+        }
+        // A character typed with ⇧ is its key plus ⇧: "+" is ⇧ and the "=" key.
+        if typed.count == 1, KeyEquivalentParser.keyCode(named: typed) == nil, let code = KeyboardLayout.shiftedKeyCode(for: typed) {
+            modifiers.insert(.shift)
+            key = KeyNames.name(for: code)
+            return
         }
         guard !typed.isEmpty, let code = KeyEquivalentParser.keyCode(named: typed) else {
             combo = nil

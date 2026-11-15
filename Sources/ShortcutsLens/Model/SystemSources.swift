@@ -173,12 +173,26 @@ enum LiveHotKeys {
 
 /// Letters and punctuation as the current keyboard layout types them.
 enum KeyboardLayout {
-    static func install() {
-        let names = currentNames()
+    /// What each key types with ⇧ ("+" → the "=" key on US), for a key box given "+".
+    @MainActor private(set) static var shifted: [String: Int] = [:]
+
+    @MainActor static func install() {
+        let names = currentNames(shift: false)
         KeyNames.layoutName = { names[$0] }
+        var byCharacter: [String: Int] = [:]
+        for (code, s) in currentNames(shift: true) where byCharacter[s] == nil { byCharacter[s] = code }
+        shifted = byCharacter
     }
 
-    private static func currentNames() -> [Int: String] {
+    /// The key that types this character with ⇧ in the current layout (US when it can't be read).
+    @MainActor static func shiftedKeyCode(for character: String) -> Int? {
+        if let code = shifted[character] { return code }
+        let us: [String: Int] = ["!": 18, "@": 19, "#": 20, "$": 21, "%": 23, "^": 22, "&": 26, "*": 28, "(": 25, ")": 29,
+                                 "_": 27, "+": 24, "{": 33, "}": 30, "|": 42, ":": 41, "\"": 39, "<": 43, ">": 47, "?": 44, "~": 50]
+        return us[character]
+    }
+
+    private static func currentNames(shift: Bool) -> [Int: String] {
         guard let source = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue(),
               let raw = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData) else { return [:] }
         let data = Unmanaged<CFData>.fromOpaque(raw).takeUnretainedValue() as Data
@@ -189,7 +203,8 @@ enum KeyboardLayout {
                 var dead: UInt32 = 0
                 var length = 0
                 var chars = [UniChar](repeating: 0, count: 4)
-                let status = UCKeyTranslate(layout, UInt16(code), UInt16(kUCKeyActionDisplay), 0, UInt32(LMGetKbdType()),
+                let state: UInt32 = shift ? UInt32(shiftKey >> 8) & 0xFF : 0
+                let status = UCKeyTranslate(layout, UInt16(code), UInt16(kUCKeyActionDisplay), state, UInt32(LMGetKbdType()),
                                             OptionBits(kUCKeyTranslateNoDeadKeysBit), &dead, 4, &length, &chars)
                 if status == noErr, length > 0 {
                     let s = String(utf16CodeUnits: chars, count: length)
